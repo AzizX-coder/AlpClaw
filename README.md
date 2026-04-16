@@ -173,25 +173,22 @@ This persona is injected into **every** interaction — CLI chat, Telegram, Slac
 
 ---
 
-## 📊 How AlpClaw Compares
+## 📊 What's Inside
 
-| Feature | AlpClaw | Claude Code | OpenClaw | Devin | AutoGPT | Cursor Agent | Aider | SWE-Agent | Cline | Bolt | v0 | Lovable | Windsurf |
-|---------|---------|-------------|----------|-------|---------|-------------|-------|-----------|-------|------|----|---------|----------|
-| **10-Phase Agent Loop** | ✅ | ✅ | ✅ | ✅ | ⚠️ | ❌ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Self-Correction** | ✅ | ✅ | ✅ | ✅ | ⚠️ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Multi-Provider** | ✅ 6 | ❌ 1 | ✅ 4 | ❌ 1 | ⚠️ 2 | ❌ 1 | ⚠️ 3 | ❌ 1 | ⚠️ 3 | ❌ 1 | ❌ 1 | ❌ 1 | ❌ 1 |
-| **Sub-Agent Swarms** | ✅ | ❌ | ❌ | ⚠️ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Telegram / Slack / Discord** | ✅ 5 | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Safety Engine** | ✅ 3 modes | ❌ | ⚠️ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Persistent Memory** | ✅ | ⚠️ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Character Persona** | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Python / Shell Exec** | ✅ | ✅ | ⚠️ | ✅ | ✅ | ❌ | ❌ | ✅ | ⚠️ | ❌ | ❌ | ❌ | ❌ |
-| **Token Optimization** | ✅ | ⚠️ | ❌ | ⚠️ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Local / Free Tier** | ✅ Ollama | ❌ | ⚠️ | ❌ | ⚠️ | ❌ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ |
-| **Open Source** | ✅ MIT | ❌ | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Global CLI** | ✅ | ✅ | ✅ | ❌ | ⚠️ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+AlpClaw ships with these capabilities today — all verifiable in the source:
 
-> ✅ Full support · ⚠️ Partial / limited · ❌ Not available
+- **6 LLM Providers** — OpenRouter, Claude, OpenAI, Gemini, DeepSeek, Ollama (local/free)
+- **6 Connectors** — Filesystem, Terminal, Database (SQLite), HTTP, Browser, Git
+- **19 Skills** — From code editing to web scraping to parallel sub-agent swarms
+- **5 Platform Bots** — Telegram, Slack, Discord, WhatsApp, Messenger
+- **10-Phase Agent Loop** — intake → understand → plan → fetch → select → execute → verify → correct → finalize → persist
+- **Self-Correction** — Per-step retry budgets with heuristic + LLM-based failure diagnosis
+- **Persistent Memory** — File-backed store with category search, TTL, and decision/failure learning
+- **Safety Engine** — 3 modes (strict/standard/permissive), secret detection, pattern-based blocking
+- **Token Optimization** — Auto-truncation of large outputs + zero-context sub-agent spawning
+- **Character Persona** — Drop a `character.md` anywhere and all replies match your tone
+- **Global CLI** — `alpclaw init` once, then `alpclaw "do X"` from any directory
+- **87 Tests** — 11 test suites covering safety, memory, routing, connectors, integration
 
 ---
 
