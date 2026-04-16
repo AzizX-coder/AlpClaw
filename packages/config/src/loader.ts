@@ -2,11 +2,16 @@ import { config as loadDotenv } from "dotenv";
 import { ConfigSchema, type AlpClawConfig } from "./schema.js";
 import { createError, type Result, ok, err } from "@alpclaw/utils";
 
+type DeepPartial<T> = {
+  [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K];
+};
+export type AlpClawConfigOverrides = DeepPartial<AlpClawConfig>;
+
 /**
  * Loads configuration from environment variables and .env file.
  * Falls back to sensible defaults for everything.
  */
-export function loadConfig(overrides?: Partial<AlpClawConfig>): Result<AlpClawConfig> {
+export function loadConfig(overrides?: AlpClawConfigOverrides): Result<AlpClawConfig> {
   loadDotenv();
 
   try {

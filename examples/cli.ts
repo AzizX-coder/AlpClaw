@@ -6,10 +6,10 @@
  */
 
 import * as p from "@clack/prompts";
-import pc from "picocolors"; // Wait, in other files picocolors is imported via `import pc from "picocolors"`. I'll let TS complain about CLI since tsx handles it fine. Let me fix the node core ones.
+import pc from "picocolors";
 import { AlpClaw } from "@alpclaw/core";
 import type { AgentPhase, Task } from "@alpclaw/utils";
-import { createLogger, renderBanner } from "@alpclaw/utils";
+import { renderBanner, animateBanner } from "@alpclaw/utils";
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -17,10 +17,10 @@ import * as process from "node:process";
 import { marked } from "marked";
 import { markedTerminal } from "marked-terminal";
 
-const log = createLogger("cli");
-
 // Setup Markdown renderer for terminal (Auto CLI code shower)
-marked.use(markedTerminal());
+// markedTerminal() returns a TerminalRenderer; cast via `any` because marked's
+// type contract treats extensions and renderers as unrelated shapes.
+marked.use(markedTerminal() as any);
 
 const PHASE_LABELS: Record<AgentPhase, string> = {
   intake: "Receiving task",
@@ -109,25 +109,38 @@ async function main() {
     return;
   }
 
-  if (args[0] === "run" && args[1] === "telegram") {
-    console.clear();
-    console.log(renderBanner({ subtitle: "Telegram Connector Node" }));
-    p.log.info("Spawning Telegraph process natively...");
-    
-    const botPath = path.resolve(process.cwd(), "bots", "telegram.ts");
-    if(!fs.existsSync(botPath)) {
-       p.log.error(pc.red("Telegram bot entrypoint not found at bots/telegram.ts"));
-       process.exit(1);
+  if (args[0] === "run" && args[1]) {
+    const platform = args[1];
+    const platforms: Record<string, { file: string; label: string }> = {
+      telegram:  { file: "telegram.ts",  label: "Telegram Connector Node" },
+      slack:     { file: "slack.ts",     label: "Slack Connector Node" },
+      whatsapp:  { file: "whatsapp.ts",  label: "WhatsApp Connector Node" },
+      messenger: { file: "messenger.ts", label: "Messenger Connector Node" },
+      discord:   { file: "discord.ts",   label: "Discord Connector Node" },
+    };
+    const target = platforms[platform];
+    if (!target) {
+      p.log.error(pc.red(`Unknown platform: ${platform}. Use: telegram | slack | whatsapp | messenger | discord`));
+      process.exit(1);
     }
-    
-    // Spawn npx tsx bots/telegram.ts holding standard stdio forever
+
+    console.clear();
+    console.log(renderBanner({ subtitle: target.label }));
+    p.log.info(`Spawning ${platform} connector natively...`);
+
+    const botPath = path.resolve(process.cwd(), "bots", target.file);
+    if (!fs.existsSync(botPath)) {
+      p.log.error(pc.red(`Connector entrypoint not found at bots/${target.file}`));
+      process.exit(1);
+    }
+
     const cmd = process.platform === "win32" ? "npx.cmd" : "npx";
     spawnSync(cmd, ["tsx", botPath], { stdio: "inherit", env: process.env });
     return;
   }
 
   console.clear();
-  console.log(renderBanner({ subtitle: "Autonomous Agent Platform v0.2.0" }));
+  await animateBanner({ subtitle: "Autonomous Agent Platform v0.2.0" });
   p.intro(pc.bgCyan(pc.black(" SYSTEM BOOT ")));
 
   const s = p.spinner();
@@ -161,7 +174,7 @@ async function runMainMenu(alpclaw: AlpClaw) {
       message: "AlpClaw Control Panel:",
       options: [
         { value: "chat", label: "💬 Agentic Chat (Start Task)" },
-        { value: "telegram", label: "📱 Connect Telegram Node" },
+        { value: "connect", label: "📡 Connect a Platform (Telegram / Slack / WhatsApp / Messenger)" },
         { value: "setup", label: "⚙️  Setup Wizard & Settings" },
         { value: "exit", label: "🚪 Exit" }
       ]
@@ -178,9 +191,22 @@ async function runMainMenu(alpclaw: AlpClaw) {
       process.exit(0);
     }
 
-    if (action === "telegram") {
+    if (action === "connect") {
+      const platform = await p.select({
+        message: "Which platform should host AlpClaw?",
+        options: [
+          { value: "telegram",  label: "📱 Telegram — long-polling bot" },
+          { value: "slack",     label: "💼 Slack — Events API webhook" },
+          { value: "whatsapp",  label: "💬 WhatsApp — Twilio webhook" },
+          { value: "messenger", label: "📨 Facebook Messenger — Graph webhook" },
+          { value: "discord",   label: "🎮 Discord — Interactions webhook" },
+          { value: "back",      label: "← Back" },
+        ],
+      });
+      if (p.isCancel(platform) || platform === "back") continue;
+
       const cmd = process.platform === "win32" ? "npx.cmd" : "npx";
-      spawnSync(cmd, ["tsx", "examples/cli.ts", "run", "telegram"], { stdio: "inherit" });
+      spawnSync(cmd, ["tsx", "examples/cli.ts", "run", platform as string], { stdio: "inherit" });
       continue;
     }
 
@@ -190,10 +216,10 @@ async function runMainMenu(alpclaw: AlpClaw) {
         const input = await p.text({
           message: pc.cyan("What can I do for you? (type 'exit' to return to menu)"),
           placeholder: "e.g., scan my code for bugs, build a python script",
-          validate: (val) => (val.trim().length === 0 ? "Please enter a task." : undefined),
+          validate: (val) => (!val || val.trim().length === 0 ? "Please enter a task." : undefined),
         });
 
-        if (p.isCancel(input) || input.toLowerCase() === "exit" || input.toLowerCase() === "menu") {
+        if (p.isCancel(input) || !input || input.toLowerCase() === "exit" || input.toLowerCase() === "menu") {
           break; // Go back to main menu
         }
 

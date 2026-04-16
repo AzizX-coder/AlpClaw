@@ -211,3 +211,53 @@ export function bad(text: string, indent: number = 2): string {
   const pad = " ".repeat(indent);
   return `${pad}${style.error(I.cross)} ${style.softWhite(text)}`;
 }
+
+// ─── Animated banner ────────────────────────────────────────────────────────
+
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/**
+ * Typewriter-reveal the AlpClaw banner one line at a time.
+ *
+ * Respects CI / NO_COLOR / non-TTY environments — falls back to a single
+ * synchronous print so pipes and logs stay clean.
+ */
+export async function animateBanner(opts?: {
+  subtitle?: string;
+  lineDelayMs?: number;
+}): Promise<void> {
+  const { subtitle, lineDelayMs = 45 } = opts || {};
+  const banner = renderBanner({ subtitle });
+
+  const skipAnim =
+    !process.stdout.isTTY ||
+    process.env.CI === "true" ||
+    process.env.NO_COLOR ||
+    process.env.ALPCLAW_NO_ANIM === "1";
+
+  if (skipAnim) {
+    process.stdout.write(banner + "\n");
+    return;
+  }
+
+  const lines = banner.split("\n");
+  for (const line of lines) {
+    process.stdout.write(line + "\n");
+    if (line.trim().length > 0) await sleep(lineDelayMs);
+  }
+}
+
+/**
+ * Short spinning pulse of the word "AlpClaw" — good for post-banner flair.
+ */
+export async function pulseWordmark(word: string = "AlpClaw", cycles: number = 2): Promise<void> {
+  if (!process.stdout.isTTY || process.env.ALPCLAW_NO_ANIM === "1") return;
+  const palette = [C.sky, C.skyLight, C.white, C.skyLight, C.sky, C.blue];
+  for (let c = 0; c < cycles; c++) {
+    for (const color of palette) {
+      process.stdout.write(`\r  ${color}${BOLD}${word}${RESET}`);
+      await sleep(80);
+    }
+  }
+  process.stdout.write(`\r  ${style.heading(word)}\n`);
+}

@@ -1,6 +1,15 @@
-import { AlpClaw } from "@alpclaw/core";
+/**
+ * AlpClaw Telegram connector node.
+ *
+ * Configure:
+ *   TELEGRAM_BOT_TOKEN    from @BotFather
+ */
+
 import { Telegraf } from "telegraf";
 import pc from "picocolors";
+import { runChatTask, getAlpClaw, chunkText } from "./lib/chat-agent.js";
+
+const MAX_MSG = 3800;
 
 async function main() {
   console.log(pc.bgCyan(pc.black(" SYSTEM BOOT ")) + " AlpClaw Telegram Connector");
@@ -11,7 +20,7 @@ async function main() {
     process.exit(1);
   }
 
-  const agentConfig = AlpClaw.create();
+  getAlpClaw();
   const bot = new Telegraf(token);
 
   console.log(pc.green("✓ Framework Initialized."));
@@ -20,39 +29,26 @@ async function main() {
   bot.on("text", async (ctx) => {
     const text = ctx.message.text;
     const msgId = ctx.message.message_id;
+    console.log(pc.dim(`[telegram] ${text.slice(0, 80)}`));
 
-    console.log(pc.dim(`Received message: ${text}`));
+    const waitingMsg = await ctx.reply("⏳ Let me think...", {
+      reply_parameters: { message_id: msgId },
+    });
 
-    // Reply thinking state
-    const waitingMsg = await ctx.reply("⏳ Let me think...", { reply_parameters: { message_id: msgId } });
+    const { reply } = await runChatTask(text);
+    const pieces = chunkText(reply, MAX_MSG);
 
     try {
-      const threadAgent = agentConfig.createAgent();
-      const response = await threadAgent.run(text);
-
-      if (response.ok) {
-        const result = response.value.result?.summary;
-        // Edit the waiting message with final response
-        await ctx.telegram.editMessageText(
-          ctx.chat.id, 
-          waitingMsg.message_id, 
-          undefined, 
-          result || "Task completed, but I have no verbal summary."
-        );
-      } else {
-        await ctx.telegram.editMessageText(
-          ctx.chat.id, 
-          waitingMsg.message_id, 
-          undefined, 
-          "❌ " + response.error.message
-        );
+      await ctx.telegram.editMessageText(ctx.chat.id, waitingMsg.message_id, undefined, pieces[0]!);
+      for (let i = 1; i < pieces.length; i++) {
+        await ctx.reply(pieces[i]!, { reply_parameters: { message_id: msgId } });
       }
     } catch (e: any) {
       await ctx.telegram.editMessageText(
-        ctx.chat.id, 
-        waitingMsg.message_id, 
-        undefined, 
-        "⚠️ Fatal error: " + String(e.message)
+        ctx.chat.id,
+        waitingMsg.message_id,
+        undefined,
+        "⚠️ Failed to deliver reply: " + String(e?.message || e),
       );
     }
   });
@@ -60,7 +56,6 @@ async function main() {
   bot.launch();
   console.log(pc.green(`⚡ AlpClaw Telegram Bot is online and listening!`));
 
-  // Enable graceful stop
   process.once("SIGINT", () => bot.stop("SIGINT"));
   process.once("SIGTERM", () => bot.stop("SIGTERM"));
 }

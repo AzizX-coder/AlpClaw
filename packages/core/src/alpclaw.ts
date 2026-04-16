@@ -1,4 +1,4 @@
-import type { AlpClawConfig } from "@alpclaw/config";
+import type { AlpClawConfig, AlpClawConfigOverrides } from "@alpclaw/config";
 import { loadConfig } from "@alpclaw/config";
 import { SafetyEngine } from "@alpclaw/safety";
 import { FileMemoryStore, MemoryManager } from "@alpclaw/memory";
@@ -15,6 +15,9 @@ import {
   FilesystemConnector,
   TerminalConnector,
   DatabaseConnector,
+  HttpConnector,
+  BrowserConnector,
+  GitConnector,
 } from "@alpclaw/connectors";
 import {
   SkillRegistry,
@@ -32,6 +35,10 @@ import {
   DatabaseAdminSkill,
   PythonRunnerSkill,
   ShellRunnerSkill,
+  CodeReviewerSkill,
+  WebScraperSkill,
+  DataAnalystSkill,
+  SqlBuilderSkill,
 } from "@alpclaw/skills";
 import { createLogger } from "@alpclaw/utils";
 import { AgentLoop, type AgentLoopCallbacks } from "./agent-loop.js";
@@ -104,6 +111,9 @@ export class AlpClaw {
     this.connectors.register(new FilesystemConnector());
     this.connectors.register(new TerminalConnector());
     this.connectors.register(new DatabaseConnector());
+    this.connectors.register(new HttpConnector());
+    this.connectors.register(new BrowserConnector());
+    this.connectors.register(new GitConnector());
 
     // ── Skills ─────────────────────────────────────────────────────────────
     this.skills = new SkillRegistry();
@@ -121,6 +131,10 @@ export class AlpClaw {
     this.skills.register(new DatabaseAdminSkill());
     this.skills.register(new PythonRunnerSkill());
     this.skills.register(new ShellRunnerSkill());
+    this.skills.register(new CodeReviewerSkill());
+    this.skills.register(new WebScraperSkill());
+    this.skills.register(new DataAnalystSkill());
+    this.skills.register(new SqlBuilderSkill());
 
     // ── Safety ─────────────────────────────────────────────────────────────
     this.safety = new SafetyEngine(config.safety.mode, config.safety.blockedPatterns);
@@ -140,7 +154,7 @@ export class AlpClaw {
   /**
    * Create an AlpClaw instance with default configuration.
    */
-  static create(overrides?: Partial<AlpClawConfig>): AlpClaw {
+  static create(overrides?: AlpClawConfigOverrides): AlpClaw {
     const configResult = loadConfig(overrides);
     if (!configResult.ok) {
       throw new Error(`Failed to load config: ${configResult.error.message}`);

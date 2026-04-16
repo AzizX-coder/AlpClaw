@@ -14,3 +14,7 @@ export { WebSearchSkill } from "./built-in/web-search.js";
 export { DatabaseAdminSkill } from "./built-in/database-admin.js";
 export { PythonRunnerSkill } from "./built-in/python-runner.js";
 export { ShellRunnerSkill } from "./built-in/shell-runner.js";
+export { CodeReviewerSkill } from "./built-in/code-reviewer.js";
+export { WebScraperSkill } from "./built-in/web-scraper.js";
+export { DataAnalystSkill } from "./built-in/data-analyst.js";
+export { SqlBuilderSkill } from "./built-in/sql-builder.js";

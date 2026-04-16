@@ -6,3 +6,6 @@ export { DatabaseConnector } from "./database.js";
 export { GitHubConnector } from "./github.js";
 export { WebhookConnector } from "./webhook.js";
 export { MessagingConnector, type MessagingChannel } from "./messaging.js";
+export { HttpConnector } from "./http.js";
+export { BrowserConnector } from "./browser.js";
+export { GitConnector } from "./git.js";

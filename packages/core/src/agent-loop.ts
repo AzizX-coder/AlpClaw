@@ -33,9 +33,11 @@ export interface AgentLoopConfig {
 export interface AgentLoopCallbacks {
   onPhaseChange?: (phase: AgentPhase, task: Task) => void;
   onToolCall?: (toolName: string, args: Record<string, unknown>) => void;
+  onToolResult?: (toolName: string, output: unknown, ok: boolean) => void;
   onStepComplete?: (step: string, result: unknown) => void;
   onError?: (error: string, phase: AgentPhase) => void;
   onConfirmationRequired?: (action: string, risk: string) => Promise<boolean>;
+  onTaskComplete?: (task: Task) => void;
 }
 
 /**
@@ -50,6 +52,8 @@ export class AgentLoop {
   private verifier: Verifier;
   private corrector: SelfCorrector;
   private config: AgentLoopConfig;
+  private stepAttempts = new Map<string, number>();
+  private toolTrace: Array<{ tool: string; args: Record<string, unknown>; ok: boolean; output?: unknown; error?: string }> = [];
 
   constructor(
     private router: ProviderRouter,
@@ -146,8 +150,9 @@ export class AgentLoop {
         this.taskManager.setStatus(task.id, "verifying");
 
         if (!execResult.ok) {
-          // Phase 8: Self-correct
+          // Phase 8: Self-correct (per-step retry budget)
           this.setPhase(task, "correct");
+          this.callbacks.onError?.(execResult.error.message, "execute");
           const corrected = await this.selfCorrect(task, step, execResult.error);
 
           if (!corrected) {
@@ -203,8 +208,10 @@ export class AgentLoop {
         success: taskResult.success,
         steps: task.steps.length,
         elapsed: `${elapsed}ms`,
+        toolCalls: this.toolTrace.length,
       });
 
+      this.callbacks.onTaskComplete?.(task);
       return ok(task);
     } catch (cause) {
       log.error("Agent loop crashed", { taskId: task.id, error: String(cause) });
@@ -282,7 +289,9 @@ export class AgentLoop {
         }
 
         this.callbacks.onToolCall?.(toolOrSkill, args.value);
-        return connectorMatch.connector.execute(connectorMatch.action, args.value);
+        const result = await connectorMatch.connector.execute(connectorMatch.action, args.value);
+        this.recordToolResult(toolOrSkill, args.value, result);
+        return result;
       }
     }
 
@@ -360,6 +369,7 @@ Use tools when needed. If no tool is needed, respond with your result directly.`
 
       this.callbacks.onToolCall?.(tc.name, tc.arguments);
       const result = await match.connector.execute(match.action, tc.arguments);
+      this.recordToolResult(tc.name, tc.arguments, result);
       if (result.ok) {
         results.push(result.value);
       } else {
@@ -368,6 +378,25 @@ Use tools when needed. If no tool is needed, respond with your result directly.`
     }
 
     return ok(results.length === 1 ? results[0] : results);
+  }
+
+  /** Record a tool call in the trace + fire observability callback. */
+  private recordToolResult(
+    tool: string,
+    args: Record<string, unknown>,
+    result: Result<unknown>,
+  ): void {
+    this.toolTrace.push(
+      result.ok
+        ? { tool, args, ok: true, output: result.value }
+        : { tool, args, ok: false, error: result.error.message },
+    );
+    this.callbacks.onToolResult?.(tool, result.ok ? result.value : result.error, result.ok);
+  }
+
+  /** Expose recent tool call trace (for UI / debugging). */
+  getToolTrace(): ReadonlyArray<{ tool: string; args: Record<string, unknown>; ok: boolean; output?: unknown; error?: string }> {
+    return this.toolTrace;
   }
 
   /**
@@ -484,8 +513,13 @@ Return only JSON. No explanation.`,
     step: { id: string; description: string; toolName?: string },
     error: AlpClawError,
   ): Promise<boolean> {
-    const canRetry = this.taskManager.retry(task.id);
-    if (!canRetry) return false;
+    const attempts = (this.stepAttempts.get(step.id) || 0) + 1;
+    this.stepAttempts.set(step.id, attempts);
+    if (attempts > this.config.maxRetries) {
+      log.warn("Step exceeded max retries", { stepId: step.id, attempts });
+      return false;
+    }
+    this.taskManager.setStatus(task.id, "correcting");
 
     const verification = this.verifier.verifyToolOutput(
       step.toolName || "unknown",
@@ -498,7 +532,7 @@ Return only JSON. No explanation.`,
       step.description,
       {},
       verification,
-      task.retries,
+      attempts - 1,
       error,
     );
 
@@ -590,6 +624,20 @@ Return only JSON. No explanation.`,
           task.id,
           step.error.message,
           step.description,
+        );
+      }
+    }
+
+    // Record successful tool strategies — helps future planning
+    if (task.result?.success) {
+      const succeeded = this.toolTrace.filter((t) => t.ok).map((t) => t.tool);
+      const uniqueTools = Array.from(new Set(succeeded));
+      if (uniqueTools.length > 0) {
+        await this.memory.remember(
+          "decision",
+          `tools-for:${task.description.slice(0, 40)}`,
+          `Useful tools for "${task.description.slice(0, 80)}": ${uniqueTools.join(", ")}`,
+          { taskId: task.id, tools: uniqueTools },
         );
       }
     }

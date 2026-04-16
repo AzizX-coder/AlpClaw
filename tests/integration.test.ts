@@ -195,7 +195,7 @@ describe("Integration: Full system wiring", () => {
     expect(projectMem.ok).toBe(true);
     if (projectMem.ok) {
       expect(projectMem.value.length).toBeGreaterThan(0);
-      expect(projectMem.value.some((e) => e.value === "TypeScript")).toBe(true);
+      expect(projectMem.value.some((e: { value: unknown }) => e.value === "TypeScript")).toBe(true);
     }
 
     const context = await memory.getRelevantContext("TypeScript");
