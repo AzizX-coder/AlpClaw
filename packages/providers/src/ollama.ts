@@ -75,7 +75,7 @@ export class OllamaProvider implements ModelProvider {
       const url = `${this.baseUrl}/api/chat`;
 
       const payload: any = {
-        model: request.model,
+        model: request.model || "llama3", // Default cleanly to llama3 if router doesn't pass one
         messages: request.messages.map((m: any) => ({
           role: m.role,
           content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
