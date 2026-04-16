@@ -22,20 +22,30 @@ const __dirname = dirname(__filename);
 const packageRoot = resolve(__dirname, "..");
 const cliPath = resolve(packageRoot, "examples", "cli.ts");
 
-const tsxName = process.platform === "win32" ? "tsx.cmd" : "tsx";
+const tsxName = "cli.mjs";
 
 const tsxCandidates = [
-  resolve(packageRoot, "node_modules", ".bin", tsxName),
-  resolve(packageRoot, "..", "..", "node_modules", ".bin", tsxName),
-  resolve(packageRoot, "..", "node_modules", ".bin", tsxName),
+  resolve(packageRoot, "node_modules", "tsx", "dist", tsxName),
+  resolve(packageRoot, "..", "..", "node_modules", "tsx", "dist", tsxName),
+  resolve(packageRoot, "..", "node_modules", "tsx", "dist", tsxName),
 ];
 
 let tsxBin = tsxCandidates.find((p) => fs.existsSync(p));
 
 // Last-resort fallback: rely on PATH (works if the user has tsx globally).
-if (!tsxBin) tsxBin = tsxName;
+if (!tsxBin) tsxBin = "tsx";
 
-const result = spawnSync(tsxBin, [cliPath, ...process.argv.slice(2)], {
+let command = tsxBin;
+let args = [cliPath, ...process.argv.slice(2)];
+
+// If we resolved the JS file directly, use the current Node binary to run it.
+// This completely avoids Windows `.cmd` shell parsing bugs with spaces in paths!
+if (tsxBin.endsWith(".mjs")) {
+  command = process.execPath;
+  args = [tsxBin, ...args];
+}
+
+const result = spawnSync(command, args, {
   stdio: "inherit",
   cwd: process.cwd(),
   env: { ...process.env, FORCE_COLOR: "1", ALPCLAW_HOME: packageRoot },

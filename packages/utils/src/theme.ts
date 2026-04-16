@@ -165,10 +165,23 @@ export function renderBanner(opts?: { subtitle?: string; compact?: boolean }): s
     "                                ░                                  ",
   ];
 
+  const terminalWidth = process.stdout.columns || 80;
+  
+  // Calculate padding to exactly center the 67-character wide logo block
+  const logoWidth = 67;
+  const leftPadCount = Math.max(0, Math.floor((terminalWidth - logoWidth) / 2));
+  const pad = " ".repeat(leftPadCount);
+
+  // Center the subtitle as well
+  const titleStrip = `${style.sky("⎯".repeat(15))}  ${style.bold(style.white(subtitle))}  ${style.sky("⎯".repeat(15))}`;
+  const rawTitleStripLen = 30 + 4 + subtitle.length; // 15 dashes * 2 + 4 spaces + text
+  const titlePadCount = Math.max(0, Math.floor((terminalWidth - rawTitleStripLen) / 2));
+  const titlePad = " ".repeat(titlePadCount);
+
   const lines = [
     "",
-    ...logo.map((l) => `  ${gradient(l)}`),
-    `  ${style.sky("⎯".repeat(15))}  ${style.bold(style.white(subtitle))}  ${style.sky("⎯".repeat(15))}`,
+    ...logo.map((l) => pad + gradient(l)),
+    titlePad + titleStrip,
     "",
   ];
 

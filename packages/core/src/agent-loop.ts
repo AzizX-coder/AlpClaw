@@ -383,8 +383,8 @@ Use tools when needed. If no tool is needed, respond with your result directly.`
       if (result.ok) {
         // TOKEN MINIMIZATION: compress massive execution outputs to save LLM tokens over multi-step tasks.
         let outputStr = typeof result.value === "string" ? result.value : JSON.stringify(result.value);
-        if (outputStr && outputStr.length > 2500) {
-           outputStr = outputStr.substring(0, 1200) + "\n...[TRUNCATED FOR TOKEN MINIMIZATION]...\n" + outputStr.substring(outputStr.length - 1200);
+        if (outputStr && outputStr.length > 800) {
+           outputStr = outputStr.substring(0, 250) + "\n...[TRUNCATED FOR TOKEN MINIMIZATION]...\n" + outputStr.substring(outputStr.length - 250);
         }
         results.push(outputStr);
       } else {
