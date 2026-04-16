@@ -38,6 +38,7 @@ export interface AgentLoopCallbacks {
   onError?: (error: string, phase: AgentPhase) => void;
   onConfirmationRequired?: (action: string, risk: string) => Promise<boolean>;
   onTaskComplete?: (task: Task) => void;
+  systemPersona?: string; // Inject character.md here
 }
 
 /**
@@ -99,11 +100,17 @@ export class AgentLoop {
       // Phase 3: Plan — break task into steps
       this.setPhase(task, "plan");
       this.taskManager.setStatus(task.id, "planning");
+      
+      const contextHints = await this.memory.getRelevantContext(taskDescription);
+      if (this.callbacks.systemPersona) {
+         contextHints.unshift(`IMPORTANT PERSONA/SYSTEM PROMPT: ${this.callbacks.systemPersona}`);
+      }
+
       const planResult = await this.planner.createPlan(
         understanding.value,
         this.connectors.allToolDefinitions(),
         this.skills.list(),
-        await this.memory.getRelevantContext(taskDescription),
+        contextHints,
       );
 
       if (!planResult.ok) {
@@ -230,11 +237,14 @@ export class AgentLoop {
     }
 
     // For complex tasks, use LLM to distill
+    const sysContent = this.callbacks.systemPersona ? 
+      `You are distilling a task based on this persona: ${this.callbacks.systemPersona}\nDistill the following task into a clear, actionable description. Return only the distilled task.` :
+      "Distill the following task into a clear, actionable description. Keep it concise. Return only the distilled task.";
+
     const messages: Message[] = [
       {
         role: "system",
-        content:
-          "Distill the following task into a clear, actionable description. Keep it concise. Return only the distilled task.",
+        content: sysContent,
       },
       { role: "user", content: intent },
     ];
@@ -371,7 +381,12 @@ Use tools when needed. If no tool is needed, respond with your result directly.`
       const result = await match.connector.execute(match.action, tc.arguments);
       this.recordToolResult(tc.name, tc.arguments, result);
       if (result.ok) {
-        results.push(result.value);
+        // TOKEN MINIMIZATION: compress massive execution outputs to save LLM tokens over multi-step tasks.
+        let outputStr = typeof result.value === "string" ? result.value : JSON.stringify(result.value);
+        if (outputStr && outputStr.length > 2500) {
+           outputStr = outputStr.substring(0, 1200) + "\n...[TRUNCATED FOR TOKEN MINIMIZATION]...\n" + outputStr.substring(outputStr.length - 1200);
+        }
+        results.push(outputStr);
       } else {
         results.push({ error: result.error.message });
       }

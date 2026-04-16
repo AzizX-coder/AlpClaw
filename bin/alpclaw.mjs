@@ -1,28 +1,52 @@
 #!/usr/bin/env node
-
 /**
- * AlpClaw CLI launcher — bootstraps tsx and runs the CLI entry point.
- * Ensures compatibility across directories by running npx tsx natively.
+ * AlpClaw global launcher.
+ *
+ * Works whether AlpClaw is:
+ *   - Installed globally:  npm i -g alpclaw
+ *   - Linked for dev:      pnpm install (repo checkout)
+ *   - npx'd:               npx alpclaw
+ *
+ * Resolves tsx from the package's own node_modules (falls back to workspace root
+ * for the monorepo dev case), so users never have to deal with ts runtime setup.
  */
 
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
+import * as fs from "node:fs";
 import process from "node:process";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const cliPath = resolve(__dirname, "..", "examples", "cli.ts");
+const packageRoot = resolve(__dirname, "..");
+const cliPath = resolve(packageRoot, "examples", "cli.ts");
 
-// Forward all args
-const args = process.argv.slice(2);
+const tsxName = process.platform === "win32" ? "tsx.cmd" : "tsx";
 
-const cmd = process.platform === "win32" ? "npx.cmd" : "npx";
+const tsxCandidates = [
+  resolve(packageRoot, "node_modules", ".bin", tsxName),
+  resolve(packageRoot, "..", "..", "node_modules", ".bin", tsxName),
+  resolve(packageRoot, "..", "node_modules", ".bin", tsxName),
+];
 
-const result = spawnSync(cmd, ["tsx", cliPath, ...args], {
+let tsxBin = tsxCandidates.find((p) => fs.existsSync(p));
+
+// Last-resort fallback: rely on PATH (works if the user has tsx globally).
+if (!tsxBin) tsxBin = tsxName;
+
+const result = spawnSync(tsxBin, [cliPath, ...process.argv.slice(2)], {
   stdio: "inherit",
   cwd: process.cwd(),
-  env: { ...process.env, FORCE_COLOR: "1" },
+  env: { ...process.env, FORCE_COLOR: "1", ALPCLAW_HOME: packageRoot },
 });
+
+if (result.error && result.error.code === "ENOENT") {
+  console.error(
+    "AlpClaw: could not locate the tsx runtime.\n" +
+      "Fix: run `npm install -g tsx` or reinstall AlpClaw.",
+  );
+  process.exit(127);
+}
 
 process.exit(result.status ?? 1);

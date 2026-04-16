@@ -39,6 +39,7 @@ import {
   WebScraperSkill,
   DataAnalystSkill,
   SqlBuilderSkill,
+  SubagentRunnerSkill,
 } from "@alpclaw/skills";
 import { createLogger } from "@alpclaw/utils";
 import { AgentLoop, type AgentLoopCallbacks } from "./agent-loop.js";
@@ -95,7 +96,7 @@ export class AlpClaw {
     }
     if (apiKeys["openrouter"]) {
       this.router.register(
-        new OpenRouterProvider(apiKeys["openrouter"]),
+        new OpenRouterProvider(apiKeys["openrouter"], { defaultModel: config.providers.defaultModel }),
         OpenRouterProvider.capabilities(),
       );
     }
@@ -132,9 +133,9 @@ export class AlpClaw {
     this.skills.register(new PythonRunnerSkill());
     this.skills.register(new ShellRunnerSkill());
     this.skills.register(new CodeReviewerSkill());
-    this.skills.register(new WebScraperSkill());
     this.skills.register(new DataAnalystSkill());
     this.skills.register(new SqlBuilderSkill());
+    this.skills.register(new SubagentRunnerSkill());
 
     // ── Safety ─────────────────────────────────────────────────────────────
     this.safety = new SafetyEngine(config.safety.mode, config.safety.blockedPatterns);

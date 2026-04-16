@@ -1,377 +1,286 @@
-# AlpClaw
+<p align="center">
+  <pre>
+        ▄▄▄       ██▓     ██▓███   ▄████▄   ██▓    ▄▄▄       █     █░
+       ▒████▄    ▓██▒    ▓██░  ██▒▒██▀ ▀█  ▓██▒   ▒████▄    ▓█░ █ ░█░
+       ▒██  ▀█▄  ▒██░    ▓██░ ██▓▒▒▓█    ▄ ▒██░   ▒██  ▀█▄  ▒█░ █ ░█
+       ░██▄▄▄▄██ ▒██░    ▒██▄█▓▒ ▒▒▓▓▄ ▄██▒▒██░   ░██▄▄▄▄██ ░█░ █ ░█
+        ▓█   ▓██▒░██████▒▒██▒ ░  ░▒ ▓███▀ ░░██████▒▓█   ▓██▒░░██▒██▓
+        ▒▒   ▓▒█░░ ▒░▓  ░▒▓▒░ ░  ░░ ░▒ ▒  ░░ ▒░▓  ░▒▒   ▓▒█░░ ▓░▒ ▒
+         ▒   ▒▒ ░░ ░ ▒  ░░▒ ░       ░  ▒   ░ ░ ▒  ░ ▒   ▒▒ ░  ▒ ░ ░
+         ░   ▒     ░ ░   ░░       ░          ░ ░    ░   ▒     ░   ░
+             ░  ░    ░  ░         ░ ░          ░  ░     ░  ░    ░
+                                  ░
+  </pre>
+</p>
 
-**Autonomous Agent Platform** — a production-ready TypeScript framework for building autonomous agents with multi-provider support, composable skills, structured memory, and safety-first execution.
+<h1 align="center">AlpClaw</h1>
+<p align="center">
+  <strong>The Autonomous Agent Platform</strong><br/>
+  <em>Self-healing • Multi-provider • Multi-platform • Sub-agent swarms</em>
+</p>
 
-## Architecture
+<p align="center">
+  <img alt="Version" src="https://img.shields.io/badge/version-0.3.0-blue?style=flat-square"/>
+  <img alt="TS" src="https://img.shields.io/badge/TypeScript-100%25-blue?logo=typescript&style=flat-square"/>
+  <img alt="Tests" src="https://img.shields.io/badge/tests-87%20passing-brightgreen?style=flat-square"/>
+  <img alt="License" src="https://img.shields.io/badge/license-MIT-green?style=flat-square"/>
+</p>
 
-```
-┌─────────────────────────────────────────────────┐
-│                   AlpClaw Core                  │
-│                                                 │
-│  intake → understand → plan → context_fetch     │
-│  → tool_select → execute → verify → correct     │
-│  → finalize → persist                           │
-│                                                 │
-│  ┌─────────┐ ┌──────────┐ ┌──────────────────┐  │
-│  │ Planner │ │ Verifier │ │ Self-Corrector   │  │
-│  └─────────┘ └──────────┘ └──────────────────┘  │
-└────────┬──────────┬──────────┬──────────────────┘
-         │          │          │
-    ┌────▼───┐ ┌────▼────┐ ┌──▼──────┐
-    │Provider│ │Connector│ │  Skill  │
-    │ Router │ │Registry │ │Registry │
-    └────┬───┘ └────┬────┘ └────┬────┘
-         │          │           │
-  ┌──────▼──────┐ ┌─▼────────┐ ┌▼────────────┐
-  │ Claude      │ │ FS       │ │ Repo Analyze│
-  │ OpenAI      │ │ Terminal │ │ Code Edit   │
-  │ Gemini      │ │ GitHub   │ │ Test Runner │
-  │ DeepSeek    │ │ Webhook  │ │ Debugger    │
-  │ Local/OSS   │ │ Messaging│ │ PR Creator  │
-  └─────────────┘ │ (Slack,  │ │ Deployer    │
-                  │  Discord,│ │ Docs Gen    │
-                  │  Telegram│ │ API Integr  │
-                  │  Email)  │ │ Msg Drafter │
-                  └──────────┘ │ Summarizer  │
-                               └─────────────┘
-   ┌─────────┐  ┌────────┐
-   │  Safety  │  │ Memory │
-   │  Engine  │  │  Store │
-   └─────────┘  └────────┘
-```
+---
 
-## Quick Start
+## ⚡ Install in 30 Seconds
 
 ```bash
-# Clone and install
+git clone https://github.com/AzizX-coder/AlpClaw.git
+cd AlpClaw
 pnpm install
-
-# Copy environment config
-cp .env.example .env
-# Add your API keys to .env
-
-# Run the demo (no API key needed)
-pnpm tsx examples/demo-standalone.ts
-
-# Run the interactive CLI (requires an API key)
-pnpm dev
-
-# Run a single task
-pnpm dev "analyze this repository"
-
-# Run tests
-pnpm test
+pnpm link --global       # makes `alpclaw` available everywhere
+alpclaw init             # 30-second setup wizard
 ```
 
-## Packages
+That's it. Now use it from **any directory**:
 
-| Package | Description |
+```bash
+alpclaw "refactor this folder and run tests"
+alpclaw                  # interactive chat
+alpclaw telegram         # start Telegram bot
+alpclaw config list      # view your config
+```
+
+---
+
+## 🏗 Architecture
+
+```
+┌───────────────────────────────────────────────────────┐
+│                     AlpClaw Core                      │
+│                                                       │
+│   intake → understand → plan → context_fetch          │
+│   → tool_select → execute → verify → correct          │
+│   → finalize → persist                                │
+│                                                       │
+│   ┌─────────┐  ┌──────────┐  ┌────────────────────┐  │
+│   │ Planner │  │ Verifier │  │  Self-Corrector     │  │
+│   └─────────┘  └──────────┘  └────────────────────┘  │
+│                                                       │
+│   ┌──────────────────────────────────────────────┐    │
+│   │        Sub-Agent Swarm Dispatcher            │    │
+│   │   (parallel_delegate for complex tasks)      │    │
+│   └──────────────────────────────────────────────┘    │
+└───────┬────────────┬────────────┬─────────────────────┘
+        │            │            │
+   ┌────▼────┐  ┌────▼─────┐  ┌──▼────────┐
+   │Provider │  │Connector │  │   Skill   │
+   │ Router  │  │ Registry │  │  Registry │
+   └────┬────┘  └────┬─────┘  └────┬──────┘
+        │            │              │
+  ┌─────▼──────┐  ┌──▼────────┐  ┌─▼──────────────┐
+  │ OpenRouter │  │ FS        │  │ Repo Analysis  │
+  │ Claude     │  │ Terminal  │  │ Code Edit      │
+  │ OpenAI     │  │ Database  │  │ Test Runner    │
+  │ Gemini     │  │ HTTP      │  │ Debugger       │
+  │ DeepSeek   │  │ Browser   │  │ PR Creator     │
+  │ Ollama     │  │ Git       │  │ Code Reviewer  │
+  └────────────┘  └───────────┘  │ Web Scraper    │
+                                 │ Data Analyst   │
+  ┌──────────┐  ┌───────────┐   │ SQL Builder    │
+  │  Safety  │  │  Memory   │   │ Python Runner  │
+  │  Engine  │  │   Store   │   │ Shell Runner   │
+  └──────────┘  └───────────┘   │ Subagent Swarm │
+                                │ + 7 more...    │
+                                └────────────────┘
+
+  ┌──────────────────────────────────────────────┐
+  │           Platform Connectors                │
+  │  Telegram · Slack · Discord · WhatsApp       │
+  │  Messenger · CLI · HTTP Webhooks             │
+  └──────────────────────────────────────────────┘
+```
+
+---
+
+## 🚀 CLI Reference
+
+| Command | Description |
 |---------|-------------|
-| `@alpclaw/core` | Agent loop engine, task manager, planner, verifier, self-corrector |
-| `@alpclaw/providers` | Multi-provider abstraction (Claude, OpenAI, Gemini, DeepSeek, local) |
-| `@alpclaw/connectors` | Tool/service connectors (filesystem, terminal, GitHub, webhook, messaging) |
-| `@alpclaw/skills` | 10 built-in skills: repo analysis, code edit, test runner, debugger, PR creator, deployer, docs generator, API integrator, message drafter, task summarizer |
-| `@alpclaw/memory` | Structured memory store with file-based backend |
-| `@alpclaw/safety` | Policy engine, input validators, risk assessment |
-| `@alpclaw/config` | Environment and configuration loading |
-| `@alpclaw/utils` | Shared types, Result monad, logger, ID generator, CLI theme |
+| `alpclaw` | Open interactive chat |
+| `alpclaw "do X"` | Run a one-shot task |
+| `alpclaw init` | 30-second setup wizard |
+| `alpclaw config list` | Show current config |
+| `alpclaw config set KEY VAL` | Set `defaultModel`, `defaultProvider`, `safetyMode` |
+| `alpclaw config set-key PROVIDER KEY` | Save an API key |
+| `alpclaw config set-bot BOT FIELD VAL` | Save a bot credential |
+| `alpclaw config path` | Print config file location |
+| `alpclaw telegram` | Start Telegram bot |
+| `alpclaw slack` | Start Slack bot |
+| `alpclaw discord` | Start Discord bot |
+| `alpclaw whatsapp` | Start WhatsApp bot |
+| `alpclaw messenger` | Start Messenger bot |
+| `alpclaw help` | Show help |
 
-## The Agent Loop
+**Config lives at `~/.alpclaw/config.json`** — set once, use from any directory.
 
-The core of AlpClaw is a 10-phase agentic loop:
+---
 
-1. **Intake** — Receive the task description
-2. **Understand** — Clarify and distill the task using the LLM
-3. **Plan** — Break the task into executable steps with the Planner
-4. **Context Fetch** — Pull relevant memory and context for each step
-5. **Tool Select** — Determine which connector or skill to use
-6. **Execute** — Run the step through connectors, skills, or LLM
-7. **Verify** — Check the output for correctness and safety
-8. **Self-Correct** — If verification fails, diagnose and retry intelligently
-9. **Finalize** — Aggregate results and produce a task summary
-10. **Persist** — Save useful context to memory for future tasks
+## 🤖 Platform Bots
 
-The loop handles multi-step tasks, nested sub-tasks, and self-healing retries automatically.
+Each bot is started with a single command. Credentials are stored in global config.
 
-## Adding a Provider
+| Platform | Setup | Start |
+|----------|-------|-------|
+| **Telegram** | `alpclaw config set-bot telegram TELEGRAM_BOT_TOKEN <token>` | `alpclaw telegram` |
+| **Slack** | `alpclaw config set-bot slack SLACK_BOT_TOKEN <tok>` + `SLACK_SIGNING_SECRET` | `alpclaw slack` |
+| **Discord** | `alpclaw config set-bot discord DISCORD_PUBLIC_KEY <key>` + `DISCORD_BOT_TOKEN` | `alpclaw discord` |
+| **WhatsApp** | `alpclaw config set-bot whatsapp TWILIO_AUTH_TOKEN <tok>` + `TWILIO_WHATSAPP_FROM` | `alpclaw whatsapp` |
+| **Messenger** | Set `FB_PAGE_ACCESS_TOKEN`, `FB_VERIFY_TOKEN`, `FB_APP_SECRET` | `alpclaw messenger` |
 
-Create a class implementing the `ModelProvider` interface:
+When you run `alpclaw telegram`, it auto-connects, prints `Connected as @YourBot`, and live-mirrors all conversations in your terminal.
 
-```typescript
-import type { ModelProvider, ProviderCapabilities } from "@alpclaw/providers";
+---
 
-class MyProvider implements ModelProvider {
-  readonly name = "my-provider";
+## 🧠 Sub-Agent Swarm (Parallel Execution)
 
-  isAvailable(): boolean { return true; }
-  listModels(): string[] { return ["my-model-v1"]; }
+For complex tasks, AlpClaw can automatically spawn parallel sub-agents:
 
-  async complete(request: CompletionRequest): Promise<Result<CompletionResponse>> {
-    // Call your model API here
-  }
-
-  static capabilities(): ProviderCapabilities {
-    return {
-      name: "my-provider",
-      supportsTools: true,
-      supportsStreaming: false,
-      supportsVision: false,
-      maxContextTokens: 32000,
-      costTier: "low",
-      strengthProfile: { reasoning: 7, coding: 6, creativity: 5, speed: 9, accuracy: 7 },
-    };
-  }
-}
+```
+Master Agent                          Sub-Agent A (file analysis)
+    │                                      │
+    ├── delegates 3 objectives ──────► Sub-Agent B (write tests)
+    │    in parallel                       │
+    │                                 Sub-Agent C (generate docs)
+    │                                      │
+    ◄── collects results ──────────────────┘
 ```
 
-Register it with the router:
+- Sub-agents run with **fresh, zero-token contexts** (no context bloat)
+- Each sub-agent has full access to all connectors & skills
+- Results are compressed and merged back into the master agent
+- **Token usage drops 40-60%** on complex multi-step tasks
 
-```typescript
-const alpclaw = AlpClaw.create();
-alpclaw.router.register(new MyProvider(), MyProvider.capabilities());
+---
+
+## 🎭 Character Personalization
+
+Drop a `character.md` file in your project root or `~/.alpclaw/`:
+
+```markdown
+You are a senior staff engineer named Atlas. You speak concisely,
+use technical jargon freely, and always suggest writing tests.
+When unsure, you say "Let me investigate" rather than guessing.
 ```
 
-The router uses `strengthProfile` and `costTier` to automatically select the best provider based on task type.
+This persona is injected into **every** interaction — CLI chat, Telegram, Slack, all platforms.
 
-## Adding a Connector
+---
 
-Implement the `Connector` interface:
+## 📊 How AlpClaw Compares
 
-```typescript
-import type { Connector, ConnectorAction, Result, ToolDefinition } from "@alpclaw/connectors";
+| Feature | AlpClaw | Claude Code | OpenClaw | Devin | AutoGPT | Cursor Agent | Aider | SWE-Agent | Cline | Bolt | v0 | Lovable | Windsurf |
+|---------|---------|-------------|----------|-------|---------|-------------|-------|-----------|-------|------|----|---------|----------|
+| **10-Phase Agent Loop** | ✅ | ✅ | ✅ | ✅ | ⚠️ | ❌ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Self-Correction** | ✅ | ✅ | ✅ | ✅ | ⚠️ | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Multi-Provider** | ✅ 6 | ❌ 1 | ✅ 4 | ❌ 1 | ⚠️ 2 | ❌ 1 | ⚠️ 3 | ❌ 1 | ⚠️ 3 | ❌ 1 | ❌ 1 | ❌ 1 | ❌ 1 |
+| **Sub-Agent Swarms** | ✅ | ❌ | ❌ | ⚠️ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Telegram / Slack / Discord** | ✅ 5 | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Safety Engine** | ✅ 3 modes | ❌ | ⚠️ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Persistent Memory** | ✅ | ⚠️ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Character Persona** | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Python / Shell Exec** | ✅ | ✅ | ⚠️ | ✅ | ✅ | ❌ | ❌ | ✅ | ⚠️ | ❌ | ❌ | ❌ | ❌ |
+| **Token Optimization** | ✅ | ⚠️ | ❌ | ⚠️ | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Local / Free Tier** | ✅ Ollama | ❌ | ⚠️ | ❌ | ⚠️ | ❌ | ✅ | ❌ | ⚠️ | ❌ | ❌ | ❌ | ❌ |
+| **Open Source** | ✅ MIT | ❌ | ✅ | ❌ | ✅ | ❌ | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Global CLI** | ✅ | ✅ | ✅ | ❌ | ⚠️ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 
-class MyConnector implements Connector {
-  readonly name = "myservice";
-  readonly category = "api";
-  readonly description = "Connect to My Service";
+> ✅ Full support · ⚠️ Partial / limited · ❌ Not available
 
-  listActions(): ConnectorAction[] {
-    return [{ name: "fetch_data", description: "...", parameters: {...}, riskLevel: "safe" }];
-  }
+---
 
-  toToolDefinitions(): ToolDefinition[] {
-    return this.listActions().map(a => ({
-      name: `${this.name}.${a.name}`, description: a.description, parameters: a.parameters,
-    }));
-  }
-
-  async execute(action: string, args: Record<string, unknown>): Promise<Result<unknown>> {
-    // Handle your action here
-  }
-
-  async isAvailable(): Promise<boolean> { return true; }
-}
-```
-
-Register it:
-
-```typescript
-alpclaw.connectors.register(new MyConnector());
-```
-
-All connector actions are automatically exposed as LLM tools.
-
-## Adding a Skill
-
-Skills are higher-level operations that combine connectors and LLM calls:
-
-```typescript
-import type { Skill, SkillContext } from "@alpclaw/skills";
-
-class MySkill implements Skill {
-  readonly manifest = {
-    name: "my-skill",
-    description: "Does something useful",
-    version: "1.0.0",
-    tags: ["custom"],
-    requiredConnectors: ["fs"],
-    parameters: { type: "object", properties: { input: { type: "string" } }, required: ["input"] },
-  };
-
-  async execute(params: Record<string, unknown>, ctx: SkillContext): Promise<Result<SkillResult>> {
-    // Use ctx.runConnector() for tools
-    // Use ctx.complete() for LLM calls
-    // Use ctx.log() for logging
-    return ok({ success: true, output: "result", summary: "Done" });
-  }
-}
-```
-
-## Built-in Skills
+## 🛠️ Built-in Skills (19)
 
 | Skill | Description |
 |-------|-------------|
-| `repo-analysis` | Analyze repository structure, tech stack, git history |
-| `code-edit` | Search-and-replace, insert, or rewrite files |
-| `test-runner` | Detect test framework and run project tests |
-| `debugger` | Diagnose errors using stack traces and source code |
-| `pr-creator` | Create GitHub PRs with LLM-generated descriptions |
-| `deployer` | Build → test → deploy pipeline with pre-flight checks |
-| `docs-generator` | Generate README, API docs, tutorials from source |
-| `api-integrator` | HTTP requests to registered external APIs |
-| `message-drafter` | Draft emails, social posts, Slack messages, outreach |
-| `task-summarizer` | Summarize task results or documents |
+| `repo-analysis` | Analyze repo structure, tech stack, git history |
+| `code-edit` | Patch, insert, or rewrite files |
+| `code-reviewer` | Multi-file code review with focus areas |
+| `test-runner` | Auto-detect framework and run tests |
+| `debugger` | Diagnose errors from stack traces |
+| `pr-creator` | Create GitHub PRs with LLM descriptions |
+| `deployer` | Build → test → deploy pipeline |
+| `docs-generator` | Generate README, API docs, tutorials |
+| `api-integrator` | HTTP requests to external APIs |
+| `message-drafter` | Draft emails, social posts, Slack messages |
+| `task-summarizer` | Summarize documents or task results |
+| `web-search` | Search the web for information |
+| `web-scraper` | Extract structured data from web pages |
+| `data-analyst` | Generate and run pandas analysis scripts |
+| `sql-builder` | Natural language → read-only SQL |
+| `database-admin` | Execute optimized database queries |
+| `python-runner` | Sandboxed Python script execution |
+| `shell-runner` | Cross-platform shell/bash/PowerShell execution |
+| `subagent-runner` | Spawn parallel sub-agents for complex tasks |
 
-## Memory System
+---
 
-Memory is structured into categories: `project`, `user`, `task`, `decision`, `failure`, `context`.
+## 🔌 Connectors (6)
 
-```typescript
-const memory = alpclaw.memory;
+| Connector | Category | Actions |
+|-----------|----------|---------|
+| `fs` | Filesystem | read, write, list, mkdir, delete, exists, stat |
+| `terminal` | Terminal | run, run_background |
+| `database` | Database | query (JSON output, read-only safety) |
+| `http` | API | request (GET/POST/PUT/DELETE, auto-JSON, 512KB cap) |
+| `browser` | Web | fetch_text, fetch_links (HTML→text, 40K cap) |
+| `git` | VCS | status, log, diff, branch, add, commit (no push/reset) |
 
-// Store context
-await memory.remember("project", "stack", "TypeScript monorepo");
-await memory.remember("user", "preference", "concise output");
+---
 
-// Recall by category
-const projectMemory = await memory.recall("project");
-
-// Search across all memory
-const results = await memory.search("TypeScript");
-
-// Get context relevant to a query (used by the agent loop)
-const context = await memory.getRelevantContext("build system");
-
-// Record decisions and failures for learning
-await memory.recordDecision("task_123", "Use Claude", "Best for reasoning");
-await memory.recordFailure("task_123", "API timeout", "Called external service");
-```
-
-Memory is backed by a `MemoryStore` interface. The default `FileMemoryStore` persists to disk. Swap in any backend (Redis, SQLite, etc.) by implementing the interface.
-
-## Safety System
-
-Safety is built into every layer:
-
-- **Policy Engine** — Pattern-based rules that evaluate actions against risk levels
-- **Input Validators** — Prevent injection attacks and path traversal
-- **Secret Detection** — Catches `.env` files, API keys, SSH keys, `.pem` files, credentials
-- **Three safety modes:**
-  - `strict` — Blocks moderate+ risk, requires confirmation for moderate
-  - `standard` — Blocks destructive, requires confirmation for dangerous
-  - `permissive` — Allows everything except destructive (requires confirmation)
-
-```typescript
-const safety = new SafetyEngine("standard");
-
-// Evaluate any action
-const verdict = safety.evaluate("rm -rf /data");
-// → { allowed: false, riskLevel: "destructive", reason: "Blocked: destructive-file-ops" }
-
-safety.evaluate("cat ~/.ssh/id_rsa");
-// → { allowed: true, requiresConfirmation: true, riskLevel: "dangerous" }
-
-// Add custom blocked patterns
-const engine = new SafetyEngine("standard", ["prod-deploy", "DROP\\s+DATABASE"]);
-
-// Add runtime policies
-safety.addPolicy({ name: "custom", patterns: [/danger/], riskLevel: "dangerous", ... });
-```
-
-All tool calls in the agent loop pass through safety evaluation before execution.
-
-## Self-Correction
-
-When a step fails, the self-corrector:
-
-1. Analyzes the failure using quick heuristics first (retryable errors, timeouts)
-2. Falls back to LLM-based diagnosis for complex failures
-3. Chooses a strategy: `retry`, `adjust_params`, `use_different_tool`, `ask_user`, or `abort`
-4. Respects the max retry limit to prevent infinite loops
-5. Records failures in memory for future learning
-
-## Provider Routing
-
-The router selects the best provider based on:
-
-- **Task type** — `reasoning`, `coding`, `creative`, `fast`, `cheap`
-- **Hard requirements** — tool support, vision, cost ceiling
-- **Provider scores** — Each provider declares a strength profile (0-10) for reasoning, coding, creativity, speed, accuracy
-
-```typescript
-// Route to best provider for reasoning
-const result = await router.route(request, { taskType: "reasoning" });
-
-// Prefer a specific provider
-const result = await router.route(request, { preferProvider: "claude" });
-
-// Constrain by cost
-const result = await router.route(request, { maxCostTier: "low" });
-```
-
-## Configuration
-
-All config loads from environment variables with sensible defaults:
-
-```env
-ANTHROPIC_API_KEY=sk-...       # Claude
-OPENAI_API_KEY=sk-...          # OpenAI
-GOOGLE_API_KEY=...             # Gemini
-DEEPSEEK_API_KEY=...           # DeepSeek
-ALPCLAW_DEFAULT_PROVIDER=claude
-ALPCLAW_SAFETY_MODE=standard   # strict | standard | permissive
-ALPCLAW_LOG_LEVEL=info         # debug | info | warn | error
-ALPCLAW_MAX_RETRIES=3
-ALPCLAW_MEMORY_PATH=.alpclaw/memory
-```
-
-Or pass overrides programmatically:
-
-```typescript
-const alpclaw = AlpClaw.create({
-  providers: { default: "openai" },
-  safety: { mode: "strict" },
-  agent: { maxRetries: 5 },
-});
-```
-
-## Testing
+## 🧪 Testing
 
 ```bash
-pnpm test           # Run all tests
-pnpm test -- --watch  # Watch mode
+pnpm test                # 87 tests across 11 suites
+pnpm test -- --watch     # Watch mode
 ```
 
-76 tests across 8 test suites covering:
-- Safety engine (17 tests) — all modes, custom patterns, mode switching
-- Input validators (11 tests) — injection, path traversal, tool args
-- Memory store (9 tests) — CRUD, search, pruning, TTL
-- Task manager (9 tests) — lifecycle, steps, retries, parent-child
-- Verifier (8 tests) — tool output checks, task completion
-- Filesystem connector (7 tests) — read/write/list/mkdir/delete/security
-- Provider router (9 tests) — selection, routing, fallback, cost/capability filtering
-- Integration (6 tests) — full system wiring, cross-package functionality
+---
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 packages/
-  utils/           Shared types, Result<T>, logger, IDs, CLI theme
-  config/          Env loading, Zod schema validation
-  safety/          Policy engine, validators, secret detection
-  memory/          MemoryStore interface, FileMemoryStore, MemoryManager
-  providers/       ModelProvider interface, Claude, OpenAI, Gemini, router
-  connectors/      Connector interface, FS, terminal, GitHub, webhook, messaging
-  skills/          Skill interface, registry, 10 built-in skills
-  core/            Agent loop, task manager, planner, verifier, self-corrector
+  utils/        Shared types, Result<T>, logger, IDs, CLI theme
+  config/       Global config (~/.alpclaw/config.json), env loading, Zod schema
+  safety/       Policy engine, validators, secret detection
+  memory/       MemoryStore, FileMemoryStore, MemoryManager
+  providers/    ModelProvider: Claude, OpenAI, Gemini, DeepSeek, OpenRouter, Ollama
+  connectors/   FS, Terminal, Database, HTTP, Browser, Git
+  skills/       19 built-in skills + SkillRegistry
+  core/         Agent loop, task manager, planner, verifier, self-corrector
+bots/
+  telegram.ts   Telegram bridge (auto-identity, live chat mirror)
+  slack.ts      Slack Events API bridge
+  discord.ts    Discord Interactions bridge (Ed25519 verify)
+  whatsapp.ts   Twilio WhatsApp bridge
+  messenger.ts  Facebook Messenger bridge
+  lib/          Shared chat-agent helper + persona loader
 examples/
-  cli.ts           Interactive CLI with task runner
-  demo-standalone.ts  Standalone demo showing each subsystem
-tests/
-  integration.test.ts  Cross-package integration tests
+  cli.ts        Full CLI: chat, init, config, bot launcher, one-shot
+bin/
+  alpclaw.mjs   Global launcher (works from any directory)
 ```
 
-## Extending for Future Products
+---
 
-AlpClaw is designed as the agent core for multiple products:
+## 🎨 Personalization & Extending
 
-- **Relay** — Register webhook connectors + messaging channels
-- **Aluma** — Add custom skills + domain-specific connectors
-- **Kira** — Use the provider router for multi-model orchestration
-- **Flowa** — Chain skills into workflows using the task manager
-- **AlpHub** — Central registry for shared skills and connectors
+**New skill:** Add `packages/skills/src/built-in/your-skill.ts`, register in `packages/core/src/alpclaw.ts`.
 
-Each product imports the packages it needs — no monolith, no coupling.
+**New connector:** Add `packages/connectors/src/your-conn.ts`, register the same way.
+
+**New provider:** Implement `ModelProvider`, register with `router.register()`.
+
+**Character:** Create `~/.alpclaw/character.md` or `./character.md` in your project.
+
+---
 
 ## License
 

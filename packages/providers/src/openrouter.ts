@@ -12,13 +12,17 @@ import { type ProviderCapabilities } from "./provider.js";
 export class OpenRouterProvider extends OpenAIProvider {
   override readonly name = "openrouter";
 
-  constructor(apiKey?: string) {
-    // OpenRouter uses the exact same interface as OpenAI
-    super(apiKey || process.env.OPENROUTER_API_KEY || "", { baseUrl: "https://openrouter.ai/api/v1" });
+  constructor(apiKey?: string, opts?: { defaultModel?: string }) {
+    super(apiKey || process.env.OPENROUTER_API_KEY || "", {
+      baseUrl: "https://openrouter.ai/api/v1",
+      defaultModel: opts?.defaultModel || "moonshotai/kimi-k2",
+    });
   }
 
   override listModels(): string[] {
     return [
+      "moonshotai/kimi-k2",
+      "moonshotai/kimi-k2-0905",
       "qwen/qwen-2.5-72b-instruct",
       "qwen/qwen-2.5-coder-32b-instruct",
       "deepseek/deepseek-chat",

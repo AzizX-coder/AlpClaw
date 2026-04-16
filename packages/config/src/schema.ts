@@ -2,8 +2,8 @@ import { z } from "zod";
 
 export const ConfigSchema = z.object({
   providers: z.object({
-    default: z.string().default("claude"),
-    defaultModel: z.string().default("claude-sonnet-4-20250514"),
+    default: z.string().default("openrouter"),
+    defaultModel: z.string().default("moonshotai/kimi-k2"),
     apiKeys: z.record(z.string(), z.string()).default({}),
   }),
   safety: z.object({

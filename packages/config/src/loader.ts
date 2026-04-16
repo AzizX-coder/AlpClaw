@@ -1,5 +1,6 @@
 import { config as loadDotenv } from "dotenv";
 import { ConfigSchema, type AlpClawConfig } from "./schema.js";
+import { readGlobalConfig } from "./global-store.js";
 import { createError, type Result, ok, err } from "@alpclaw/utils";
 
 type DeepPartial<T> = {
@@ -8,35 +9,42 @@ type DeepPartial<T> = {
 export type AlpClawConfigOverrides = DeepPartial<AlpClawConfig>;
 
 /**
- * Loads configuration from environment variables and .env file.
- * Falls back to sensible defaults for everything.
+ * Layered config, lowest → highest precedence:
+ *   1. defaults (schema)
+ *   2. ~/.alpclaw/config.json
+ *   3. .env / process env
+ *   4. explicit overrides passed to loadConfig()
  */
 export function loadConfig(overrides?: AlpClawConfigOverrides): Result<AlpClawConfig> {
   loadDotenv();
 
   try {
-    const envConfig = {
+    const global = readGlobalConfig();
+
+    const globalLayer = {
       providers: {
-        default: process.env["ALPCLAW_DEFAULT_PROVIDER"] || "claude",
-        defaultModel: process.env["ALPCLAW_DEFAULT_MODEL"] || "claude-sonnet-4-20250514",
-        apiKeys: extractApiKeys(),
+        default: global.defaultProvider,
+        defaultModel: global.defaultModel,
+        apiKeys: global.apiKeys || {},
       },
-      safety: {
-        mode: process.env["ALPCLAW_SAFETY_MODE"] || "standard",
-      },
-      memory: {
-        storagePath: process.env["ALPCLAW_MEMORY_PATH"] || ".alpclaw/memory",
-      },
-      agent: {
-        maxRetries: parseInt(process.env["ALPCLAW_MAX_RETRIES"] || "3", 10),
-      },
-      logging: {
-        level: process.env["ALPCLAW_LOG_LEVEL"] || "info",
-      },
+      safety: { mode: global.safetyMode },
     };
 
-    const merged = deepMerge(envConfig, overrides || {});
-    const parsed = ConfigSchema.parse(merged);
+    const envLayer = {
+      providers: {
+        default: process.env["ALPCLAW_DEFAULT_PROVIDER"],
+        defaultModel: process.env["ALPCLAW_DEFAULT_MODEL"],
+        apiKeys: extractApiKeys(),
+      },
+      safety: { mode: process.env["ALPCLAW_SAFETY_MODE"] },
+      memory: { storagePath: process.env["ALPCLAW_MEMORY_PATH"] },
+      agent: { maxRetries: process.env["ALPCLAW_MAX_RETRIES"] ? parseInt(process.env["ALPCLAW_MAX_RETRIES"], 10) : undefined },
+      logging: { level: process.env["ALPCLAW_LOG_LEVEL"] },
+    };
+
+    const layered = deepMerge(deepMerge(globalLayer, envLayer), (overrides || {}) as Record<string, unknown>);
+    const cleaned = dropUndefined(layered);
+    const parsed = ConfigSchema.parse(cleaned);
     return ok(parsed);
   } catch (cause) {
     return err(createError("config", "Failed to load configuration", { cause }));
@@ -50,6 +58,7 @@ function extractApiKeys(): Record<string, string> {
     OPENAI_API_KEY: "openai",
     GOOGLE_API_KEY: "gemini",
     DEEPSEEK_API_KEY: "deepseek",
+    OPENROUTER_API_KEY: "openrouter",
   };
 
   for (const [envVar, provider] of Object.entries(mapping)) {
@@ -82,4 +91,14 @@ function deepMerge(target: Record<string, unknown>, source: Record<string, unkno
     }
   }
   return result;
+}
+
+function dropUndefined(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (v === undefined) continue;
+    out[k] = dropUndefined(v);
+  }
+  return out;
 }

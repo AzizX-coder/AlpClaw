@@ -5,8 +5,27 @@
  */
 
 import { AlpClaw } from "@alpclaw/core";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import * as os from "node:os";
 
 let _alpclaw: AlpClaw | null = null;
+let _personaCache: string | undefined = undefined;
+
+function getPersona() {
+  if (_personaCache !== undefined) return _personaCache;
+  const localChar = path.resolve(process.cwd(), "character.md");
+  const globalChar = path.resolve(os.homedir(), ".alpclaw", "character.md");
+  
+  if (fs.existsSync(localChar)) {
+    _personaCache = fs.readFileSync(localChar, "utf-8");
+  } else if (fs.existsSync(globalChar)) {
+    _personaCache = fs.readFileSync(globalChar, "utf-8");
+  } else {
+    _personaCache = "";
+  }
+  return _personaCache;
+}
 
 export function getAlpClaw(): AlpClaw {
   if (!_alpclaw) _alpclaw = AlpClaw.create();
@@ -25,7 +44,10 @@ export async function runChatTask(text: string): Promise<ChatRunResult> {
   }
 
   try {
-    const agent = getAlpClaw().createAgent();
+    const persona = getPersona();
+    const agent = getAlpClaw().createAgent({
+      systemPersona: persona ? persona : undefined
+    });
     const result = await agent.run(trimmed);
     if (result.ok) {
       const summary = result.value.result?.summary?.trim();
