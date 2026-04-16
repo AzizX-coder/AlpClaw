@@ -100,8 +100,12 @@ export const style = {
 
 // ─── Banner ──────────────────────────────────────────────────────────────────
 
+import pc from "picocolors";
+
+// ─── Banner ──────────────────────────────────────────────────────────────────
+
 /**
- * AlpClaw brand banner — stylized ASCII logo in the brand palette.
+ * AlpClaw brand banner — incredibly stylish ASCII logo mapped with a truecolor gradient.
  */
 export function renderBanner(opts?: { subtitle?: string; compact?: boolean }): string {
   const { subtitle = "Autonomous Agent Platform", compact = false } = opts || {};
@@ -114,36 +118,57 @@ export function renderBanner(opts?: { subtitle?: string; compact?: boolean }): s
     ].join("\n");
   }
 
-  // Gradient: deep blue → sky blue, from left to right
+  // Gradient: Deep Fuchsia -> Violet -> Brand Blue -> Sky Blue
   const gradient = (line: string): string => {
     const len = line.length;
     let out = "";
     for (let i = 0; i < len; i++) {
       const char = line[i]!;
-      // Interpolate from blue(37,99,235) to sky(56,189,248)
       const t = i / Math.max(len - 1, 1);
-      const r = Math.round(37 + (56 - 37) * t);
-      const g = Math.round(99 + (189 - 99) * t);
-      const b = Math.round(235 + (248 - 235) * t);
+
+      // Color stops for a gorgeous Cyberpunk sunset glow
+      let r, g, b;
+      if (t < 0.33) {
+        // Fuchsia (217, 70, 239) to Violet (139, 92, 246)
+        const t2 = t / 0.33;
+        r = Math.round(217 + (139 - 217) * t2);
+        g = Math.round(70 + (92 - 70) * t2);
+        b = Math.round(239 + (246 - 239) * t2);
+      } else if (t < 0.66) {
+        // Violet (139, 92, 246) to Brand Blue (37, 99, 235)
+        const t2 = (t - 0.33) / 0.33;
+        r = Math.round(139 + (37 - 139) * t2);
+        g = Math.round(92 + (99 - 92) * t2);
+        b = Math.round(246 + (235 - 246) * t2);
+      } else {
+        // Brand Blue (37, 99, 235) to Sky Blue (56, 189, 248)
+        const t2 = (t - 0.66) / 0.34;
+        r = Math.round(37 + (56 - 37) * t2);
+        g = Math.round(99 + (189 - 99) * t2);
+        b = Math.round(235 + (248 - 235) * t2);
+      }
       out += `\x1b[38;2;${r};${g};${b}m${char}`;
     }
     return out + RESET;
   };
 
   const logo = [
-    "  █████╗ ██╗     ██████╗  ██████╗██╗      █████╗ ██╗    ██╗",
-    " ██╔══██╗██║     ██╔══██╗██╔════╝██║     ██╔══██╗██║    ██║",
-    " ███████║██║     ██████╔╝██║     ██║     ███████║██║ █╗ ██║",
-    " ██╔══██║██║     ██╔═══╝ ██║     ██║     ██╔══██║██║███╗██║",
-    " ██║  ██║███████╗██║     ╚██████╗███████╗██║  ██║╚███╔███╔╝",
-    " ╚═╝  ╚═╝╚══════╝╚═╝      ╚═════╝╚══════╝╚═╝  ╚═╝ ╚══╝╚══╝ ",
+    "      ▄▄▄       ██▓     ██▓███   ▄████▄   ██▓    ▄▄▄       █     █░",
+    "     ▒████▄    ▓██▒    ▓██░  ██▒▒██▀ ▀█  ▓██▒   ▒████▄    ▓█░ █ ░█░",
+    "     ▒██  ▀█▄  ▒██░    ▓██░ ██▓▒▒▓█    ▄ ▒██░   ▒██  ▀█▄  ▒█░ █ ░█ ",
+    "     ░██▄▄▄▄██ ▒██░    ▒██▄█▓▒ ▒▒▓▓▄ ▄██▒▒██░   ░██▄▄▄▄██ ░█░ █ ░█ ",
+    "      ▓█   ▓██▒░██████▒▒██▒ ░  ░▒ ▓███▀ ░░██████▒▓█   ▓██▒░░██▒██▓ ",
+    "      ▒▒   ▓▒█░░ ▒░▓  ░▒▓▒░ ░  ░░ ░▒ ▒  ░░ ▒░▓  ░▒▒   ▓▒█░░ ▓░▒ ▒  ",
+    "       ▒   ▒▒ ░░ ░ ▒  ░░▒ ░       ░  ▒   ░ ░ ▒  ░ ▒   ▒▒ ░  ▒ ░ ░  ",
+    "       ░   ▒     ░ ░   ░░       ░          ░ ░    ░   ▒     ░   ░  ",
+    "           ░  ░    ░  ░         ░ ░          ░  ░     ░  ░    ░    ",
+    "                                ░                                  ",
   ];
 
   const lines = [
     "",
     ...logo.map((l) => `  ${gradient(l)}`),
-    "",
-    `  ${style.sky("⎯".repeat(4))}  ${style.bold(style.white(subtitle))}  ${style.sky("⎯".repeat(4))}`,
+    `  ${style.sky("⎯".repeat(15))}  ${style.bold(style.white(subtitle))}  ${style.sky("⎯".repeat(15))}`,
     "",
   ];
 

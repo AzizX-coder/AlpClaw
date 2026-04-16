@@ -4,13 +4,15 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@alpclaw/core": "workspace:*",
-    "@alpclaw/utils": "workspace:*",
     "@alpclaw/config": "workspace:*",
-    "@alpclaw/providers": "workspace:*",
     "@alpclaw/connectors": "workspace:*",
-    "@alpclaw/skills": "workspace:*",
+    "@alpclaw/core": "workspace:*",
     "@alpclaw/memory": "workspace:*",
-    "@alpclaw/safety": "workspace:*"
+    "@alpclaw/providers": "workspace:*",
+    "@alpclaw/safety": "workspace:*",
+    "@alpclaw/skills": "workspace:*",
+    "@alpclaw/utils": "workspace:*",
+    "@clack/prompts": "^1.2.0",
+    "picocolors": "^1.1.1"
   }
 }

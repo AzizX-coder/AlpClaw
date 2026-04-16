@@ -10,3 +10,5 @@ export { DocsGeneratorSkill } from "./built-in/docs-generator.js";
 export { MessageDrafterSkill } from "./built-in/message-drafter.js";
 export { DeployerSkill } from "./built-in/deployer.js";
 export { ApiIntegratorSkill } from "./built-in/api-integrator.js";
+export { WebSearchSkill } from "./built-in/web-search.js";
+export { DatabaseAdminSkill } from "./built-in/database-admin.js";

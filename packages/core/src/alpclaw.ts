@@ -7,6 +7,8 @@ import {
   ClaudeProvider,
   OpenAIProvider,
   GeminiProvider,
+  OllamaProvider,
+  OpenRouterProvider,
 } from "@alpclaw/providers";
 import {
   ConnectorRegistry,
@@ -25,6 +27,8 @@ import {
   MessageDrafterSkill,
   DeployerSkill,
   ApiIntegratorSkill,
+  WebSearchSkill,
+  DatabaseAdminSkill,
 } from "@alpclaw/skills";
 import { createLogger } from "@alpclaw/utils";
 import { AgentLoop, type AgentLoopCallbacks } from "./agent-loop.js";
@@ -79,6 +83,18 @@ export class AlpClaw {
         OpenAIProvider.capabilities("deepseek"),
       );
     }
+    if (apiKeys["openrouter"]) {
+      this.router.register(
+        new OpenRouterProvider(apiKeys["openrouter"]),
+        OpenRouterProvider.capabilities(),
+      );
+    }
+    
+    // Always register Ollama as it connects locally without keys
+    this.router.register(
+      new OllamaProvider(),
+      OllamaProvider.capabilities(),
+    );
 
     // ── Connectors ─────────────────────────────────────────────────────────
     this.connectors = new ConnectorRegistry();
@@ -97,6 +113,8 @@ export class AlpClaw {
     this.skills.register(new MessageDrafterSkill());
     this.skills.register(new DeployerSkill());
     this.skills.register(new ApiIntegratorSkill());
+    this.skills.register(new WebSearchSkill());
+    this.skills.register(new DatabaseAdminSkill());
 
     // ── Safety ─────────────────────────────────────────────────────────────
     this.safety = new SafetyEngine(config.safety.mode, config.safety.blockedPatterns);
