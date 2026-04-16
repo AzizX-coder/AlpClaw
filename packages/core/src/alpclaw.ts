@@ -1,0 +1,141 @@
+import type { AlpClawConfig } from "@alpclaw/config";
+import { loadConfig } from "@alpclaw/config";
+import { SafetyEngine } from "@alpclaw/safety";
+import { FileMemoryStore, MemoryManager } from "@alpclaw/memory";
+import {
+  ProviderRouter,
+  ClaudeProvider,
+  OpenAIProvider,
+  GeminiProvider,
+} from "@alpclaw/providers";
+import {
+  ConnectorRegistry,
+  FilesystemConnector,
+  TerminalConnector,
+} from "@alpclaw/connectors";
+import {
+  SkillRegistry,
+  RepoAnalysisSkill,
+  CodeEditSkill,
+  TestRunnerSkill,
+  TaskSummarizerSkill,
+  DebuggerSkill,
+  PrCreatorSkill,
+  DocsGeneratorSkill,
+  MessageDrafterSkill,
+  DeployerSkill,
+  ApiIntegratorSkill,
+} from "@alpclaw/skills";
+import { createLogger } from "@alpclaw/utils";
+import { AgentLoop, type AgentLoopCallbacks } from "./agent-loop.js";
+
+const log = createLogger("alpclaw");
+
+/**
+ * AlpClaw is the main entry point / factory for building an agent instance.
+ * It wires together all subsystems: providers, connectors, skills, safety, memory.
+ */
+export class AlpClaw {
+  readonly config: AlpClawConfig;
+  readonly router: ProviderRouter;
+  readonly connectors: ConnectorRegistry;
+  readonly skills: SkillRegistry;
+  readonly safety: SafetyEngine;
+  readonly memory: MemoryManager;
+
+  private constructor(config: AlpClawConfig) {
+    this.config = config;
+
+    // ── Providers ──────────────────────────────────────────────────────────
+    this.router = new ProviderRouter(config.providers.default);
+
+    const apiKeys = config.providers.apiKeys;
+
+    if (apiKeys["claude"]) {
+      this.router.register(
+        new ClaudeProvider(apiKeys["claude"]),
+        ClaudeProvider.capabilities(),
+      );
+    }
+    if (apiKeys["openai"]) {
+      this.router.register(
+        new OpenAIProvider(apiKeys["openai"]),
+        OpenAIProvider.capabilities(),
+      );
+    }
+    if (apiKeys["gemini"]) {
+      this.router.register(
+        new GeminiProvider(apiKeys["gemini"]),
+        GeminiProvider.capabilities(),
+      );
+    }
+    if (apiKeys["deepseek"]) {
+      this.router.register(
+        new OpenAIProvider(apiKeys["deepseek"], {
+          name: "deepseek",
+          baseUrl: "https://api.deepseek.com/v1",
+          defaultModel: "deepseek-chat",
+        }),
+        OpenAIProvider.capabilities("deepseek"),
+      );
+    }
+
+    // ── Connectors ─────────────────────────────────────────────────────────
+    this.connectors = new ConnectorRegistry();
+    this.connectors.register(new FilesystemConnector());
+    this.connectors.register(new TerminalConnector());
+
+    // ── Skills ─────────────────────────────────────────────────────────────
+    this.skills = new SkillRegistry();
+    this.skills.register(new RepoAnalysisSkill());
+    this.skills.register(new CodeEditSkill());
+    this.skills.register(new TestRunnerSkill());
+    this.skills.register(new TaskSummarizerSkill());
+    this.skills.register(new DebuggerSkill());
+    this.skills.register(new PrCreatorSkill());
+    this.skills.register(new DocsGeneratorSkill());
+    this.skills.register(new MessageDrafterSkill());
+    this.skills.register(new DeployerSkill());
+    this.skills.register(new ApiIntegratorSkill());
+
+    // ── Safety ─────────────────────────────────────────────────────────────
+    this.safety = new SafetyEngine(config.safety.mode, config.safety.blockedPatterns);
+
+    // ── Memory ─────────────────────────────────────────────────────────────
+    const memoryStore = new FileMemoryStore(config.memory.storagePath);
+    this.memory = new MemoryManager(memoryStore);
+
+    log.info("AlpClaw initialized", {
+      providers: this.router.listProviders().map((p) => p.name),
+      connectors: this.connectors.list().map((c) => c.name),
+      skills: this.skills.list().map((s) => s.name),
+      safetyMode: config.safety.mode,
+    });
+  }
+
+  /**
+   * Create an AlpClaw instance with default configuration.
+   */
+  static create(overrides?: Partial<AlpClawConfig>): AlpClaw {
+    const configResult = loadConfig(overrides);
+    if (!configResult.ok) {
+      throw new Error(`Failed to load config: ${configResult.error.message}`);
+    }
+    return new AlpClaw(configResult.value);
+  }
+
+  /**
+   * Create an agent loop ready to execute tasks.
+   */
+  createAgent(callbacks?: AgentLoopCallbacks): AgentLoop {
+    return new AgentLoop(
+      this.router,
+      this.connectors,
+      this.skills,
+      this.safety,
+      this.memory,
+      this.config,
+      callbacks,
+    );
+  }
+}

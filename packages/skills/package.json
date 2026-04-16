@@ -1,0 +1,17 @@
+{
+  "name": "@alpclaw/skills",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@alpclaw/utils": "workspace:*",
+    "@alpclaw/connectors": "workspace:*",
+    "@alpclaw/providers": "workspace:*",
+    "zod": "^3.23.0"
+  }
+}

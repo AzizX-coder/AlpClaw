@@ -1,0 +1,12 @@
+export type { Skill, SkillContext } from "./skill.js";
+export { SkillRegistry } from "./registry.js";
+export { RepoAnalysisSkill } from "./built-in/repo-analysis.js";
+export { CodeEditSkill } from "./built-in/code-edit.js";
+export { TestRunnerSkill } from "./built-in/test-runner.js";
+export { TaskSummarizerSkill } from "./built-in/task-summarizer.js";
+export { DebuggerSkill } from "./built-in/debugger.js";
+export { PrCreatorSkill } from "./built-in/pr-creator.js";
+export { DocsGeneratorSkill } from "./built-in/docs-generator.js";
+export { MessageDrafterSkill } from "./built-in/message-drafter.js";
+export { DeployerSkill } from "./built-in/deployer.js";
+export { ApiIntegratorSkill } from "./built-in/api-integrator.js";

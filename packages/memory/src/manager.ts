@@ -1,0 +1,89 @@
+import {
+  type MemoryEntry,
+  type MemoryCategory,
+  type Result,
+  ok,
+  generateId,
+  createLogger,
+} from "@alpclaw/utils";
+import type { MemoryStore } from "./store.js";
+
+const log = createLogger("memory");
+
+/**
+ * MemoryManager provides a high-level API over a MemoryStore.
+ * It handles ID generation, timestamps, and convenience methods.
+ */
+export class MemoryManager {
+  constructor(private store: MemoryStore) {}
+
+  /** Remember a piece of information. */
+  async remember(
+    category: MemoryCategory,
+    key: string,
+    value: string,
+    metadata: Record<string, unknown> = {},
+    ttlMs?: number,
+  ): Promise<Result<MemoryEntry>> {
+    const entry: MemoryEntry = {
+      id: generateId("mem"),
+      category,
+      key,
+      value,
+      metadata,
+      createdAt: Date.now(),
+      expiresAt: ttlMs ? Date.now() + ttlMs : undefined,
+    };
+
+    const result = await this.store.save(entry);
+    if (!result.ok) return result;
+
+    log.debug("Remembered", { category, key });
+    return ok(entry);
+  }
+
+  /** Recall entries by category. */
+  async recall(category: MemoryCategory, keyPrefix?: string): Promise<Result<MemoryEntry[]>> {
+    return this.store.query(category, keyPrefix);
+  }
+
+  /** Search across all memory. */
+  async search(query: string, limit?: number): Promise<Result<MemoryEntry[]>> {
+    return this.store.search(query, limit);
+  }
+
+  /** Forget a specific entry. */
+  async forget(id: string): Promise<Result<void>> {
+    return this.store.delete(id);
+  }
+
+  /** Clean up expired memories. */
+  async cleanup(): Promise<Result<number>> {
+    return this.store.prune();
+  }
+
+  /** Record a task decision for future reference. */
+  async recordDecision(
+    taskId: string,
+    decision: string,
+    reasoning: string,
+  ): Promise<Result<MemoryEntry>> {
+    return this.remember("decision", `task:${taskId}`, decision, { reasoning });
+  }
+
+  /** Record a failure for learning. */
+  async recordFailure(
+    taskId: string,
+    error: string,
+    attempted: string,
+  ): Promise<Result<MemoryEntry>> {
+    return this.remember("failure", `task:${taskId}`, error, { attempted });
+  }
+
+  /** Get context relevant to a query. */
+  async getRelevantContext(query: string, limit: number = 5): Promise<string[]> {
+    const result = await this.store.search(query, limit);
+    if (!result.ok) return [];
+    return result.value.map((e) => `[${e.category}:${e.key}] ${e.value}`);
+  }
+}

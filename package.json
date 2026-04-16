@@ -1,0 +1,29 @@
+{
+  "name": "alpclaw",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AlpClaw — Autonomous Agent Platform",
+  "author": "AlpClaw",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "pnpm -r run build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint packages/ examples/ --ext .ts",
+    "format": "prettier --write \"packages/**/*.ts\" \"examples/**/*.ts\"",
+    "clean": "pnpm -r run clean",
+    "dev": "tsx examples/cli.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "eslint": "^9.0.0",
+    "prettier": "^3.3.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
