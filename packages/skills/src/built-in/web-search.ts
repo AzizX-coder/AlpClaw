@@ -1,6 +1,5 @@
-import type { Result } from "@alpclaw/utils";
-import { ok, err } from "@alpclaw/utils";
-import type { Skill, SkillContext, SkillManifest, SkillResult } from "../skill.js";
+import { type Result, type SkillManifest, type SkillResult, ok, err, createError } from "@alpclaw/utils";
+import type { Skill, SkillContext } from "../skill.js";
 
 /**
  * WebSearchSkill - Queries the web natively via search endpoints if provided or simply
@@ -35,12 +34,12 @@ export class WebSearchSkill implements Skill {
       const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
       const curlCommand = `curl -s "${url}" | grep -o 'class="result__snippet[^>]*>.*</a>' | sed 's/<[^>]*>//g' | head -n 5`;
 
-      const result = await ctx.runConnector("terminal", "run", {
+      const result = await ctx.runConnector("terminal.run", {
         command: curlCommand,
       });
 
       if (!result.ok) {
-        return err(new Error(`Search execution failed: ${result.error.message}`));
+        return err(createError("skill", `Search execution failed: ${result.error.message}`));
       }
 
       // The result from terminal connector includes stdout and stderr
@@ -61,7 +60,7 @@ export class WebSearchSkill implements Skill {
         summary: `Found web results for '${query}'.`,
       });
     } catch (e) {
-      return err(e instanceof Error ? e : new Error(String(e)));
+      return err(createError("skill", String(e)));
     }
   }
 }

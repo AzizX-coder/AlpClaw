@@ -14,6 +14,7 @@ import {
   ConnectorRegistry,
   FilesystemConnector,
   TerminalConnector,
+  DatabaseConnector,
 } from "@alpclaw/connectors";
 import {
   SkillRegistry,
@@ -29,6 +30,8 @@ import {
   ApiIntegratorSkill,
   WebSearchSkill,
   DatabaseAdminSkill,
+  PythonRunnerSkill,
+  ShellRunnerSkill,
 } from "@alpclaw/skills";
 import { createLogger } from "@alpclaw/utils";
 import { AgentLoop, type AgentLoopCallbacks } from "./agent-loop.js";
@@ -100,6 +103,7 @@ export class AlpClaw {
     this.connectors = new ConnectorRegistry();
     this.connectors.register(new FilesystemConnector());
     this.connectors.register(new TerminalConnector());
+    this.connectors.register(new DatabaseConnector());
 
     // ── Skills ─────────────────────────────────────────────────────────────
     this.skills = new SkillRegistry();
@@ -115,6 +119,8 @@ export class AlpClaw {
     this.skills.register(new ApiIntegratorSkill());
     this.skills.register(new WebSearchSkill());
     this.skills.register(new DatabaseAdminSkill());
+    this.skills.register(new PythonRunnerSkill());
+    this.skills.register(new ShellRunnerSkill());
 
     // ── Safety ─────────────────────────────────────────────────────────────
     this.safety = new SafetyEngine(config.safety.mode, config.safety.blockedPatterns);

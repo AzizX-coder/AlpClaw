@@ -12,3 +12,5 @@ export { DeployerSkill } from "./built-in/deployer.js";
 export { ApiIntegratorSkill } from "./built-in/api-integrator.js";
 export { WebSearchSkill } from "./built-in/web-search.js";
 export { DatabaseAdminSkill } from "./built-in/database-admin.js";
+export { PythonRunnerSkill } from "./built-in/python-runner.js";
+export { ShellRunnerSkill } from "./built-in/shell-runner.js";

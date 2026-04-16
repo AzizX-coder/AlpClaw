@@ -14,7 +14,7 @@ export class OpenRouterProvider extends OpenAIProvider {
 
   constructor(apiKey?: string) {
     // OpenRouter uses the exact same interface as OpenAI
-    super(apiKey || process.env.OPENROUTER_API_KEY, "https://openrouter.ai/api/v1");
+    super(apiKey || process.env.OPENROUTER_API_KEY || "", { baseUrl: "https://openrouter.ai/api/v1" });
   }
 
   override listModels(): string[] {
@@ -36,7 +36,7 @@ export class OpenRouterProvider extends OpenAIProvider {
       supportsStreaming: true,
       supportsVision: true,
       maxContextTokens: 128000,
-      costTier: "moderate",
+      costTier: "medium",
       strengthProfile: {
         reasoning: 9,
         coding: 9,

@@ -101,7 +101,7 @@ export class ClaudeProvider implements ModelProvider {
             {
               type: "tool_result",
               tool_use_id: msg.toolCallId || "",
-              content: msg.content,
+              content: msg.content || "",
             },
           ],
         });
@@ -127,7 +127,7 @@ export class ClaudeProvider implements ModelProvider {
 
       converted.push({
         role: msg.role as "user" | "assistant",
-        content: msg.content,
+        content: msg.content || "",
       });
     }
 
@@ -147,9 +147,9 @@ export class ClaudeProvider implements ModelProvider {
     const toolCalls: ToolCall[] = [];
 
     for (const block of data.content) {
-      if (block.type === "text") {
+      if (block.type === "text" && block.text) {
         content += block.text;
-      } else if (block.type === "tool_use") {
+      } else if (block.type === "tool_use" && block.id && block.name) {
         toolCalls.push({
           id: block.id,
           name: block.name,

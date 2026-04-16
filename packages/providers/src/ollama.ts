@@ -1,10 +1,15 @@
 import { z } from "zod";
-import { type Result, ok, err } from "@alpclaw/utils";
+import { 
+  type Result, 
+  ok, 
+  err, 
+  createError,
+  type CompletionRequest,
+  type CompletionResponse,
+} from "@alpclaw/utils";
 import {
   type ModelProvider,
   type ProviderCapabilities,
-  type CompletionRequest,
-  type CompletionResponse,
 } from "./provider.js";
 
 // Basic Ollama API schema validation
@@ -71,19 +76,22 @@ export class OllamaProvider implements ModelProvider {
 
       const payload: any = {
         model: request.model,
-        messages: request.messages.map((m) => ({
+        messages: request.messages.map((m: any) => ({
           role: m.role,
           content: typeof m.content === "string" ? m.content : JSON.stringify(m.content),
         })),
         stream: false,
       };
 
-      if (request.systemPrompt) {
-        payload.messages.unshift({ role: "system", content: request.systemPrompt });
+      // Extract system prompts from messages
+      const systemMsg = request.messages.find(m => m.role === "system");
+      if (systemMsg) {
+        payload.messages = request.messages.filter(m => m.role !== "system");
+        payload.messages.unshift({ role: "system", content: systemMsg.content });
       }
 
       if (request.tools && request.tools.length > 0) {
-        payload.tools = request.tools.map((t) => ({
+        payload.tools = request.tools.map((t: any) => ({
           type: "function",
           function: {
             name: t.name,
@@ -105,7 +113,7 @@ export class OllamaProvider implements ModelProvider {
 
       if (!response.ok) {
         const text = await response.text();
-        return err(new Error(`Ollama API error: ${response.status} ${response.statusText} - ${text}`));
+        return err(createError("provider", `Ollama API error: ${response.status} ${response.statusText} - ${text}`));
       }
 
       const data = await response.json();
@@ -126,9 +134,11 @@ export class OllamaProvider implements ModelProvider {
           completionTokens: parsed.eval_count || 0,
           totalTokens: (parsed.prompt_eval_count || 0) + (parsed.eval_count || 0),
         },
+        model: parsed.model || request.model || "ollama",
+        finishReason: parsed.done ? (toolCalls && toolCalls.length > 0 ? "tool_calls" : "stop") : "error",
       });
     } catch (error) {
-      return err(error instanceof Error ? error : new Error(String(error)));
+      return err(createError("provider", String(error)));
     }
   }
 }

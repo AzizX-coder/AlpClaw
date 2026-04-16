@@ -1,14 +1,13 @@
-import type { Result } from "@alpclaw/utils";
-import { ok, err } from "@alpclaw/utils";
-import type { Skill, SkillContext, SkillManifest, SkillResult } from "../skill.js";
+import { type Result, type SkillManifest, type SkillResult, ok, err, createError } from "@alpclaw/utils";
+import type { Skill, SkillContext } from "../skill.js";
 
 export class DatabaseAdminSkill implements Skill {
   readonly manifest: SkillManifest = {
     name: "database-admin",
     description: "Inspect local SQLite databases or Postgres configurations",
     version: "1.0.0",
-    tags: ["database", "sql", "sqlite", "query", "admin"],
-    requiredConnectors: ["terminal"],
+    tags: ["database", "sql", "sqlite", "query", "admin", "optimized"],
+    requiredConnectors: ["database"],
     parameters: {
       type: "object",
       properties: {
@@ -31,29 +30,30 @@ export class DatabaseAdminSkill implements Skill {
       const query = params.query as string;
 
       if (!query.trim().toLowerCase().startsWith("select") && !query.trim().toLowerCase().startsWith(".table") && !query.trim().toLowerCase().startsWith(".schema")) {
-        return err(new Error("Security violation: Only SELECT, .tables, or .schema queries are permitted by the db-admin skill."));
+        return err(createError("skill", "Security violation: Only SELECT, .tables, or .schema queries are permitted by the db-admin skill."));
       }
 
-      ctx.log(`Executing SQL on ${dbPath}`);
-      const command = `sqlite3 "${dbPath}" "${query}" -header -column`;
-
-      const result = await ctx.runConnector("terminal", "run", {
-        command,
+      ctx.log(`Executing optimized SQL on ${dbPath}`);
+      
+      const result = await ctx.runConnector("database.query", {
+        databasePath: dbPath,
+        query,
+        readonly: true,
       });
 
       if (!result.ok) {
-        return err(new Error(`SQL execution failed: ${result.error.message}`));
+        return err(createError("skill", `SQL execution failed: ${result.error.message}`));
       }
 
-      const output = (result.value as any)?.stdout || String(result.value);
+      const output = JSON.stringify(result.value, null, 2);
 
       return ok({
         success: true,
-        output: output.trim() ? output : "Query returned 0 rows.",
-        summary: `Executed database query on ${dbPath}.`,
+        output: output !== "{\n  \"rows\": []\n}" ? output : "Query returned 0 rows.",
+        summary: `Executed optimized database query on ${dbPath}.`,
       });
     } catch (e) {
-      return err(e instanceof Error ? e : new Error(String(e)));
+      return err(createError("skill", String(e)));
     }
   }
 }

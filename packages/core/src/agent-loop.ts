@@ -7,6 +7,7 @@ import type {
   CompletionRequest,
   Result,
   ToolCall,
+  AlpClawError,
 } from "@alpclaw/utils";
 import { ok, err, createError, createLogger, generateId } from "@alpclaw/utils";
 import type { AlpClawConfig } from "@alpclaw/config";
@@ -481,7 +482,7 @@ Return only JSON. No explanation.`,
   private async selfCorrect(
     task: Task,
     step: { id: string; description: string; toolName?: string },
-    error: { kind: string; message: string; retryable: boolean },
+    error: AlpClawError,
   ): Promise<boolean> {
     const canRetry = this.taskManager.retry(task.id);
     if (!canRetry) return false;
