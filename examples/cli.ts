@@ -1,31 +1,35 @@
 #!/usr/bin/env tsx
 
 /**
- * AlpClaw CLI — OpenClaw-style entrypoint.
+ * Splash CLI — OpenClaw-style entrypoint.
  *
  * Usage:
- *   alpclaw                         Open an interactive chat.
- *   alpclaw "do X"                  Run a one-shot task from any directory.
- *   alpclaw init                    30-second setup wizard (writes ~/.alpclaw/config.json).
- *   alpclaw config list             Show current global config.
- *   alpclaw config set KEY VAL      Set a global config field.
- *   alpclaw config set-key P VAL    Save a provider API key (claude|openai|openrouter|...).
- *   alpclaw telegram|slack|...      Start a platform bot.
- *   alpclaw help                    Show this help.
+ *   splash                          Open an interactive chat.
+ *   splash "do X"                   Run a one-shot task from any directory.
+ *   splash "do X" --background      Detach; returns a run id.
+ *   splash init                     30-second setup wizard (writes ~/.splash/config.json).
+ *   splash tui                      Live run dashboard.
+ *   splash runs list|logs|stop|retry|attach
+ *   splash config list|doctor|preset|set|set-key
+ *   splash telegram|slack|whatsapp|messenger|discord  Start a platform bot.
+ *   splash help                     Show this help.
  */
 
 import * as p from "@clack/prompts";
 import pc from "picocolors";
-import { AlpClaw } from "@alpclaw/core";
+import { AlpClaw, RunManager, runWorker } from "@alpclaw/core";
 import type { AgentPhase, Task } from "@alpclaw/utils";
-import { renderBanner } from "@alpclaw/utils";
+import { renderBanner, ripple, startLoader } from "@alpclaw/utils";
 import {
   readGlobalConfig,
   writeGlobalConfig,
   setApiKey,
   setBotCredential,
   setGlobalValue,
+  applyPreset,
   globalConfigPath,
+  globalConfigDir,
+  runsDir,
   type GlobalConfigShape,
 } from "@alpclaw/config";
 import { spawnSync } from "node:child_process";
@@ -97,16 +101,41 @@ async function main() {
     case "discord":
       await runBot(cmd);
       return;
+    case "runs":
+      await runRunsCmd(args.slice(1));
+      return;
+    case "tui":
+    case "dashboard":
+      await launchTui();
+      return;
+    case "_worker":
+      // internal: spawned by background runs to execute a pre-allocated run id
+      if (args[1] && args[2]) {
+        await runWorker(args[1], args.slice(2).join(" "));
+        return;
+      }
+      process.exit(2);
+      break;
     case "run":
       if (args[1] && BOT_SPECS[args[1]]) {
         await runBot(args[1]);
         return;
       }
+      // `splash run "task" [--background]` form
+      if (args[1]) {
+        const rest = args.slice(1);
+        const bg = rest.includes("--background") || rest.includes("-b");
+        const prompt = rest.filter((a) => a !== "--background" && a !== "-b").join(" ");
+        await runFromCli(prompt, { background: bg });
+        return;
+      }
       break;
   }
 
-  // Fallback: treat args as a one-shot prompt.
-  await runOneShot(args.join(" "));
+  // Fallback: treat args as a one-shot prompt. Support --background flag.
+  const bg = args.includes("--background") || args.includes("-b");
+  const promptText = args.filter((a) => a !== "--background" && a !== "-b").join(" ");
+  await runFromCli(promptText, { background: bg });
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -118,20 +147,35 @@ function printHelp() {
   console.log(
     [
       pc.bold("USAGE"),
-      `  ${pc.cyan("alpclaw")}                          Open an interactive chat`,
-      `  ${pc.cyan("alpclaw")} "build me a script"      Run a one-shot task`,
+      `  ${pc.cyan("splash")}                            Open an interactive chat`,
+      `  ${pc.cyan("splash")} "build me a script"        Run a one-shot task`,
+      `  ${pc.cyan("splash")} "..." --background          Detach and return a run id`,
       "",
-      pc.bold("COMMANDS"),
-      `  ${pc.cyan("alpclaw init")}                     30-second setup wizard`,
-      `  ${pc.cyan("alpclaw config list")}              Show config`,
-      `  ${pc.cyan("alpclaw config set")} KEY VAL       Set a field (defaultModel, safetyMode, ...)`,
-      `  ${pc.cyan("alpclaw config set-key")} P VAL     Save API key for provider (openrouter, claude, openai, ...)`,
-      `  ${pc.cyan("alpclaw telegram")}|${pc.cyan("slack")}|${pc.cyan("whatsapp")}|${pc.cyan("messenger")}|${pc.cyan("discord")}   Start a platform bot`,
-      `  ${pc.cyan("alpclaw help")}                     Show this help`,
+      pc.bold("CORE COMMANDS"),
+      `  ${pc.cyan("splash init")}                       30-second setup wizard`,
+      `  ${pc.cyan("splash tui")}                        Open the live run dashboard`,
+      `  ${pc.cyan("splash help")}                       Show this help`,
+      "",
+      pc.bold("RUNS"),
+      `  ${pc.cyan("splash runs list")}                  Show active/recent runs`,
+      `  ${pc.cyan("splash runs logs")} ID [--follow]    Tail events for a run`,
+      `  ${pc.cyan("splash runs attach")} ID             Open a run in the TUI`,
+      `  ${pc.cyan("splash runs stop")} ID               Cancel a running run`,
+      `  ${pc.cyan("splash runs retry")} ID [-b]         Re-run a task`,
       "",
       pc.bold("CONFIG"),
-      `  Global config lives at ${pc.dim(globalConfigPath())}`,
-      `  Env vars override config. .env in cwd is also read.`,
+      `  ${pc.cyan("splash config list")}                Show effective config`,
+      `  ${pc.cyan("splash config doctor")}              Verify keys / perms / reachability`,
+      `  ${pc.cyan("splash config preset")} fast|balanced|safe`,
+      `  ${pc.cyan("splash config set")} KEY VAL         Set a field`,
+      `  ${pc.cyan("splash config set-key")} P VAL       Save API key for provider`,
+      "",
+      pc.bold("PLATFORMS"),
+      `  ${pc.cyan("splash telegram")}|${pc.cyan("slack")}|${pc.cyan("whatsapp")}|${pc.cyan("messenger")}|${pc.cyan("discord")}`,
+      "",
+      pc.dim(`Config: ${globalConfigPath()}`),
+      pc.dim(`Env:    SPLASH_* and legacy ALPCLAW_* vars both work. .env in cwd is read.`),
+      pc.dim(`Alias:  \`alpclaw\` still works — it delegates to \`splash\`.`),
       "",
     ].join("\n"),
   );
@@ -143,7 +187,7 @@ function printHelp() {
 
 async function runInit() {
   console.log(renderBanner({ subtitle: "Setup" }));
-  p.intro(pc.bgCyan(pc.black(" ALPCLAW INIT ")));
+  p.intro(pc.bgCyan(pc.black(" 💧 SPLASH INIT ")));
   p.log.message("Pick a provider and drop in a key. You can change this any time with `alpclaw config`.");
 
   const existing = readGlobalConfig();
@@ -231,7 +275,7 @@ async function runConfig(args: string[]) {
     const [key, ...rest] = args.slice(1);
     const val = rest.join(" ");
     if (!key || val === "") {
-      console.error("Usage: alpclaw config set <defaultProvider|defaultModel|safetyMode> <value>");
+      console.error("Usage: splash configset <defaultProvider|defaultModel|safetyMode> <value>");
       process.exit(2);
     }
     const allowed = ["defaultProvider", "defaultModel", "safetyMode"] as const;
@@ -248,7 +292,7 @@ async function runConfig(args: string[]) {
     const [provider, ...rest] = args.slice(1);
     const val = rest.join(" ");
     if (!provider || !val) {
-      console.error("Usage: alpclaw config set-key <provider> <api-key>");
+      console.error("Usage: splash configset-key <provider> <api-key>");
       process.exit(2);
     }
     setApiKey(provider, val);
@@ -260,7 +304,7 @@ async function runConfig(args: string[]) {
     const [bot, field, ...rest] = args.slice(1);
     const val = rest.join(" ");
     if (!bot || !field || !val) {
-      console.error("Usage: alpclaw config set-bot <bot> <field> <value>");
+      console.error("Usage: splash configset-bot <bot> <field> <value>");
       process.exit(2);
     }
     setBotCredential(bot, field, val);
@@ -268,8 +312,287 @@ async function runConfig(args: string[]) {
     return;
   }
 
-  console.error("Unknown config subcommand. Use: list | path | set | set-key | set-bot");
+  if (sub === "doctor") {
+    await runDoctor(args.slice(1));
+    return;
+  }
+
+  if (sub === "preset") {
+    const name = args[1];
+    if (!name || !["fast", "balanced", "safe"].includes(name)) {
+      console.error("Usage: splash config preset <fast|balanced|safe>");
+      process.exit(2);
+    }
+    const cfg = applyPreset(name as "fast" | "balanced" | "safe");
+    console.log(pc.green(`✓ preset applied: ${name}`));
+    console.log(pc.dim(`  safetyMode=${cfg.safetyMode}  runtime=${cfg.runtime}`));
+    return;
+  }
+
+  console.error("Unknown config subcommand. Use: list | path | set | set-key | set-bot | doctor | preset");
   process.exit(2);
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// config doctor
+// ──────────────────────────────────────────────────────────────────────────
+
+async function runDoctor(args: string[]): Promise<void> {
+  const json = args.includes("--json");
+  const cfg = readGlobalConfig();
+  const checks: { name: string; ok: boolean; detail: string; fix?: string }[] = [];
+
+  // 1. provider key present
+  const hasAnyKey =
+    Object.values(cfg.apiKeys || {}).some(Boolean) ||
+    !!process.env.ANTHROPIC_API_KEY ||
+    !!process.env.OPENAI_API_KEY ||
+    !!process.env.OPENROUTER_API_KEY ||
+    !!process.env.GOOGLE_API_KEY ||
+    !!process.env.DEEPSEEK_API_KEY ||
+    !!process.env.OLLAMA_BASE_URL;
+  checks.push({
+    name: "provider key",
+    ok: hasAnyKey,
+    detail: hasAnyKey ? "found" : "none",
+    fix: "splash init  — or  splash config set-key openrouter sk-or-...",
+  });
+
+  // 2. write perms
+  const dir = globalConfigDir();
+  let writable = false;
+  try {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+    fs.accessSync(dir, fs.constants.W_OK);
+    writable = true;
+  } catch {
+    writable = false;
+  }
+  checks.push({
+    name: "config dir writable",
+    ok: writable,
+    detail: dir,
+    fix: `chmod u+w ${dir}`,
+  });
+
+  // 3. runs dir
+  const rdir = runsDir();
+  let runsOK = false;
+  try {
+    fs.mkdirSync(rdir, { recursive: true, mode: 0o700 });
+    fs.accessSync(rdir, fs.constants.W_OK);
+    runsOK = true;
+  } catch {
+    runsOK = false;
+  }
+  checks.push({ name: "runs dir writable", ok: runsOK, detail: rdir });
+
+  // 4. provider reachability (best effort — skip if no fetch)
+  const defaultProvider = cfg.defaultProvider || "openrouter";
+  const providerHost: Record<string, string> = {
+    openrouter: "https://openrouter.ai",
+    claude: "https://api.anthropic.com",
+    openai: "https://api.openai.com",
+    gemini: "https://generativelanguage.googleapis.com",
+    deepseek: "https://api.deepseek.com",
+    ollama: process.env.OLLAMA_BASE_URL || "http://localhost:11434",
+  };
+  const host = providerHost[defaultProvider];
+  let reachable = false;
+  if (host && typeof fetch === "function") {
+    try {
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), 3000);
+      const res = await fetch(host, { method: "HEAD", signal: ac.signal }).catch(() => null);
+      clearTimeout(timer);
+      reachable = !!res;
+    } catch {
+      reachable = false;
+    }
+  }
+  checks.push({
+    name: `provider reachable (${defaultProvider})`,
+    ok: reachable,
+    detail: host || "?",
+    fix: "check network / VPN",
+  });
+
+  if (json) {
+    console.log(JSON.stringify({ checks }, null, 2));
+    return;
+  }
+
+  console.log(pc.cyan(pc.bold("💧 splash config doctor")));
+  console.log();
+  for (const c of checks) {
+    const icon = c.ok ? pc.green("✓") : pc.red("✗");
+    console.log(`  ${icon} ${pc.bold(c.name)}  ${pc.dim(c.detail)}`);
+    if (!c.ok && c.fix) console.log(`      ${pc.yellow("fix:")} ${c.fix}`);
+  }
+  const bad = checks.filter((c) => !c.ok).length;
+  console.log();
+  console.log(bad === 0 ? pc.green("All checks passed.") : pc.yellow(`${bad} check(s) failed.`));
+  if (bad !== 0) process.exit(1);
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// runs subcommands
+// ──────────────────────────────────────────────────────────────────────────
+
+async function runRunsCmd(args: string[]): Promise<void> {
+  const sub = args[0] || "list";
+  const json = args.includes("--json");
+  const rm = new RunManager();
+
+  if (sub === "list") {
+    const list = rm.list();
+    if (json) {
+      console.log(JSON.stringify(list, null, 2));
+      return;
+    }
+    if (list.length === 0) {
+      console.log(pc.dim("no runs yet. Start one with `splash \"do X\" --background`"));
+      return;
+    }
+    console.log(pc.cyan(pc.bold("💧 runs")));
+    for (const r of list.slice(0, 30)) {
+      const color = statusColor(r.status);
+      console.log(
+        `  ${color(badgeForStatus(r.status))} ${pc.dim(r.id.slice(-10))}  ${r.task.slice(0, 60)}` +
+          pc.dim(`  (${r.mode})`),
+      );
+    }
+    return;
+  }
+
+  const id = args[1];
+
+  if (sub === "show" || sub === "get") {
+    if (!id) return failUsage("splash runs show <id>");
+    const rec = rm.get(id);
+    if (!rec) { console.error("not found"); process.exit(1); }
+    console.log(JSON.stringify(rec, null, 2));
+    return;
+  }
+
+  if (sub === "stop" || sub === "cancel") {
+    if (!id) return failUsage("splash runs stop <id>");
+    const ok = rm.stop(id);
+    console.log(ok ? pc.green(`✓ stopped ${id}`) : pc.yellow("already ended or unknown"));
+    return;
+  }
+
+  if (sub === "retry") {
+    if (!id) return failUsage("splash runs retry <id>");
+    const bg = args.includes("--background") || args.includes("-b");
+    const { id: newId } = await rm.retry(id, { background: bg });
+    console.log(pc.green(`✓ retry queued as ${newId}`));
+    return;
+  }
+
+  if (sub === "logs") {
+    if (!id) return failUsage("splash runs logs <id>");
+    const follow = args.includes("--follow") || args.includes("-f");
+    const events = rm.events(id);
+    for (const e of events) console.log(formatEventLine(e, json));
+    if (follow) {
+      const stop = rm.follow(id, (e) => console.log(formatEventLine(e, json)));
+      process.on("SIGINT", () => { stop(); process.exit(0); });
+    }
+    return;
+  }
+
+  if (sub === "attach") {
+    if (!id) return failUsage("splash runs attach <id>");
+    await launchTui(id);
+    return;
+  }
+
+  failUsage("splash runs <list|show|stop|retry|logs|attach> [id] [--json|--follow]");
+}
+
+function failUsage(msg: string): void {
+  console.error(msg);
+  process.exit(2);
+}
+
+function statusColor(s: string): (t: string) => string {
+  switch (s) {
+    case "running":   return pc.cyan;
+    case "succeeded": return pc.green;
+    case "failed":    return pc.red;
+    case "cancelled": return pc.gray;
+    case "queued":    return pc.yellow;
+    default:          return pc.white;
+  }
+}
+
+function badgeForStatus(s: string): string {
+  switch (s) {
+    case "running":   return "◌ running  ";
+    case "succeeded": return "✓ succeeded";
+    case "failed":    return "✗ failed   ";
+    case "cancelled": return "⊘ cancelled";
+    case "queued":    return "○ queued   ";
+    default:          return "· " + s;
+  }
+}
+
+function formatEventLine(e: any, json: boolean): string {
+  if (json) return JSON.stringify(e);
+  const t = new Date(e.at).toISOString().slice(11, 19);
+  switch (e.type) {
+    case "RunCreated":   return pc.gray(`[${t}]`) + ` created ${pc.dim("(" + e.mode + ")")}`;
+    case "RunStarted":   return pc.gray(`[${t}]`) + pc.cyan(" started");
+    case "PhaseChanged": return pc.gray(`[${t}]`) + pc.cyan(` phase → ${e.phase}`);
+    case "ToolCalled":   return pc.gray(`[${t}]`) + pc.magenta(` ⚡ ${e.tool}`);
+    case "LogLine":      return pc.gray(`[${t}]`) + ` ${e.text}`;
+    case "RunCompleted": return pc.gray(`[${t}]`) + pc.green(` ✓ completed (${e.steps ?? 0} steps)`);
+    case "RunFailed":    return pc.gray(`[${t}]`) + pc.red(` ✗ ${e.error}`);
+    case "RunCancelled": return pc.gray(`[${t}]`) + pc.yellow(` ⊘ cancelled`);
+    default:             return pc.gray(`[${t}]`) + " " + JSON.stringify(e);
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// TUI launcher
+// ──────────────────────────────────────────────────────────────────────────
+
+async function launchTui(_focusId?: string): Promise<void> {
+  if (!process.stdout.isTTY) {
+    await runRunsCmd(["list"]);
+    return;
+  }
+  const ink = await import("ink");
+  const React = await import("react");
+  const { TuiApp } = await import("@alpclaw/core");
+  const manager = new RunManager();
+  const { waitUntilExit } = ink.render(
+    React.createElement(TuiApp, { manager }),
+    { exitOnCtrlC: true },
+  );
+  await waitUntilExit();
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// runFromCli — foreground or background one-shot
+// ──────────────────────────────────────────────────────────────────────────
+
+async function runFromCli(prompt: string, opts: { background: boolean }): Promise<void> {
+  if (!prompt.trim()) {
+    await openChat();
+    return;
+  }
+  ensureConfigured();
+  if (opts.background) {
+    const rm = new RunManager();
+    const { id } = await rm.start(prompt, { background: true });
+    console.log(pc.green(`✓ started background run ${pc.bold(id)}`));
+    console.log(pc.dim(`  follow: splash runs logs ${id} --follow`));
+    console.log(pc.dim(`  attach: splash runs attach ${id}`));
+    return;
+  }
+  await runOneShot(prompt);
 }
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -304,7 +627,7 @@ async function runBot(name: string) {
     process.exit(2);
   }
 
-  const alpclawHome = process.env.ALPCLAW_HOME || process.cwd();
+  const alpclawHome = process.env.SPLASH_HOME || process.env.ALPCLAW_HOME || process.cwd();
   const botPath = path.resolve(alpclawHome, "bots", spec.file);
   if (!fs.existsSync(botPath)) {
     console.error(pc.red(`Bot entrypoint not found at ${botPath}`));
@@ -363,9 +686,9 @@ function ensureConfigured(): void {
   if (!hasKey) {
     console.log(renderBanner({ subtitle: "First run" }));
     console.log(pc.yellow("No API key configured yet. Run:"));
-    console.log(`  ${pc.cyan("alpclaw init")}`);
+    console.log(`  ${pc.cyan("splash init")}`);
     console.log(pc.dim("Or, without the wizard:"));
-    console.log(`  ${pc.cyan("alpclaw config set-key openrouter sk-or-...")}`);
+    console.log(`  ${pc.cyan("splash config set-key openrouter sk-or-...")}`);
     process.exit(1);
   }
 }
@@ -375,22 +698,39 @@ function buildAgent(): AlpClaw {
   try {
     return AlpClaw.create();
   } catch (err) {
-    console.error(pc.red(`Failed to initialize AlpClaw: ${String(err)}`));
+    console.error(pc.red(`Failed to initialize Splash: ${String(err)}`));
     process.exit(1);
   }
+}
+
+function printStatusLine(a: AlpClaw): void {
+  const p = a.config.providers;
+  const s = a.config.safety;
+  const runtime = readGlobalConfig().runtime || "foreground";
+  console.log(
+    "  " +
+      pc.cyan("💧 ") +
+      pc.bold("splash") +
+      pc.dim("  provider=") + pc.white(p.default) +
+      pc.dim("  model=") + pc.white(p.defaultModel) +
+      pc.dim("  safety=") + pc.white(s.mode) +
+      pc.dim("  runtime=") + pc.white(runtime),
+  );
 }
 
 async function runOneShot(prompt: string) {
   const alpclaw = buildAgent();
   console.log(renderBanner({ subtitle: "Task", compact: true }));
+  printStatusLine(alpclaw);
   await runTask(alpclaw, prompt, loadPersona());
 }
 
 async function openChat() {
   const alpclaw = buildAgent();
   console.log(renderBanner({ subtitle: "Chat" }));
-  p.intro(pc.bgCyan(pc.black(" ALPCLAW ")));
-  p.log.message(pc.dim("Type your task. `exit` quits. `/help` for commands."));
+  printStatusLine(alpclaw);
+  p.intro(pc.bgCyan(pc.black(" 💧 SPLASH ")));
+  p.log.message(pc.dim("Type your task. `exit` quits. `/help` for commands. `/tui` for dashboard."));
 
   while (true) {
     const input = await p.text({
@@ -404,6 +744,8 @@ async function openChat() {
     if (!text || text === "exit" || text === "quit") break;
     if (text === "/help") { printHelp(); continue; }
     if (text === "/config") { await runConfig(["list"]); continue; }
+    if (text === "/tui") { await launchTui(); continue; }
+    if (text === "/runs") { await runRunsCmd(["list"]); continue; }
 
     await runTask(alpclaw, text, loadPersona());
   }

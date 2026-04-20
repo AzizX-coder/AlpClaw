@@ -30,16 +30,19 @@ export function loadConfig(overrides?: AlpClawConfigOverrides): Result<AlpClawCo
       safety: { mode: global.safetyMode },
     };
 
+    const envGet = (key: string): string | undefined =>
+      process.env["SPLASH_" + key] || process.env["ALPCLAW_" + key];
+
     const envLayer = {
       providers: {
-        default: process.env["ALPCLAW_DEFAULT_PROVIDER"],
-        defaultModel: process.env["ALPCLAW_DEFAULT_MODEL"],
+        default: envGet("DEFAULT_PROVIDER"),
+        defaultModel: envGet("DEFAULT_MODEL"),
         apiKeys: extractApiKeys(),
       },
-      safety: { mode: process.env["ALPCLAW_SAFETY_MODE"] },
-      memory: { storagePath: process.env["ALPCLAW_MEMORY_PATH"] },
-      agent: { maxRetries: process.env["ALPCLAW_MAX_RETRIES"] ? parseInt(process.env["ALPCLAW_MAX_RETRIES"], 10) : undefined },
-      logging: { level: process.env["ALPCLAW_LOG_LEVEL"] },
+      safety: { mode: envGet("SAFETY_MODE") },
+      memory: { storagePath: envGet("MEMORY_PATH") },
+      agent: { maxRetries: envGet("MAX_RETRIES") ? parseInt(envGet("MAX_RETRIES")!, 10) : undefined },
+      logging: { level: envGet("LOG_LEVEL") },
     };
 
     const layered = deepMerge(deepMerge(globalLayer, envLayer), (overrides || {}) as Record<string, unknown>);

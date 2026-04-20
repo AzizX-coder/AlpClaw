@@ -12,7 +12,7 @@ export const ConfigSchema = z.object({
     requireConfirmation: z.array(z.string()).default([]),
   }),
   memory: z.object({
-    storagePath: z.string().default(".alpclaw/memory"),
+    storagePath: z.string().default(".splash/memory"),
     maxEntries: z.number().default(1000),
     ttlMs: z.number().default(7 * 24 * 60 * 60 * 1000), // 7 days
   }),

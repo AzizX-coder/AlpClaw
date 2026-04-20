@@ -6,7 +6,11 @@ export {
   setGlobalValue,
   setApiKey,
   setBotCredential,
+  applyPreset,
   globalConfigPath,
   globalConfigDir,
+  legacyConfigDir,
+  runsDir,
+  logsDir,
   type GlobalConfigShape,
 } from "./global-store.js";

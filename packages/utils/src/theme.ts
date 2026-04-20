@@ -1,5 +1,5 @@
 /**
- * AlpClaw visual theme — blue, skyblue, white palette.
+ * Splash visual theme — aqua / cyan / deep-blue palette evoking waves and droplets.
  * Everything that prints to the console goes through here for a consistent look.
  */
 
@@ -11,42 +11,37 @@ export const DIM = "\x1b[2m";
 export const ITALIC = "\x1b[3m";
 export const UNDERLINE = "\x1b[4m";
 
-// True-color RGB escapes — works in all modern terminals
 const rgb = (r: number, g: number, b: number) => `\x1b[38;2;${r};${g};${b}m`;
 const bgRgb = (r: number, g: number, b: number) => `\x1b[48;2;${r};${g};${b}m`;
 
-// ─── AlpClaw brand palette ───────────────────────────────────────────────────
+// ─── Splash brand palette (water/aqua) ──────────────────────────────────────
 
 export const C = {
-  /** Deep brand blue — headlines, borders */
-  blue: rgb(37, 99, 235), // #2563EB
-  /** Sky blue — primary accent, active state */
-  sky: rgb(56, 189, 248), // #38BDF8
-  /** Light sky — secondary accent, hover */
-  skyLight: rgb(125, 211, 252), // #7DD3FC
-  /** Pure white — primary text */
+  /** Deep ocean — headlines, borders */
+  blue: rgb(14, 116, 144),     // #0E7490 teal-700
+  /** Aqua — primary accent */
+  sky: rgb(34, 211, 238),      // #22D3EE cyan-400
+  /** Light spray — secondary accent */
+  skyLight: rgb(165, 243, 252),// #A5F3FC cyan-200
+  /** Pure white — crest foam */
   white: rgb(255, 255, 255),
-  /** Soft white — body text */
-  softWhite: rgb(226, 232, 240), // slate-200
-  /** Muted gray — metadata, timestamps */
-  muted: rgb(148, 163, 184), // slate-400
-  /** Subtle — least important */
-  subtle: rgb(100, 116, 139), // slate-500
+  /** Soft white */
+  softWhite: rgb(226, 232, 240),
+  /** Muted slate */
+  muted: rgb(148, 163, 184),
+  subtle: rgb(100, 116, 139),
 
-  /** Status colors — still keep semantic colors */
   success: rgb(34, 197, 94),
   warning: rgb(251, 191, 36),
   error: rgb(239, 68, 68),
 
-  /** Backgrounds for banners/badges */
-  bgBlue: bgRgb(37, 99, 235),
-  bgSky: bgRgb(56, 189, 248),
+  bgBlue: bgRgb(14, 116, 144),
+  bgSky: bgRgb(34, 211, 238),
 };
 
-// ─── Icons — consistent across the CLI ──────────────────────────────────────
+// ─── Icons ──────────────────────────────────────────────────────────────────
 
 export const I = {
-  // Status
   check: "✓",
   cross: "✗",
   warn: "⚠",
@@ -55,25 +50,18 @@ export const I = {
   arrow: "→",
   chevron: "›",
 
-  // Progress
   dot: "●",
   circle: "○",
-  spinner: ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
+  square: "▣",
+  diamond: "◆",
 
-  // Phases
-  brain: "◆",
-  tool: "⚡",
-  sparkle: "✦",
-  diamond: "◇",
-
-  // Structural
-  corner: "└",
-  branch: "├",
-  pipe: "│",
-  dash: "─",
+  /** Droplet — the Splash mascot */
+  drop: "💧",
+  /** Wave */
+  wave: "≈",
 };
 
-// ─── Styling helpers ─────────────────────────────────────────────────────────
+// ─── style helpers ──────────────────────────────────────────────────────────
 
 export const style = {
   blue: (s: string) => `${C.blue}${s}${RESET}`,
@@ -92,20 +80,14 @@ export const style = {
   dim: (s: string) => `${DIM}${s}${RESET}`,
   italic: (s: string) => `${ITALIC}${s}${RESET}`,
 
-  /** Brand-styled header: bold sky-blue */
   heading: (s: string) => `${BOLD}${C.sky}${s}${RESET}`,
-  /** Sky-blue on blue background badge */
   badge: (s: string) => `${C.bgBlue}${C.white}${BOLD} ${s} ${RESET}`,
 };
 
 // ─── Banner ──────────────────────────────────────────────────────────────────
 
-import pc from "picocolors";
-
-// ─── Banner ──────────────────────────────────────────────────────────────────
-
 /**
- * AlpClaw brand banner — incredibly stylish ASCII logo mapped with a truecolor gradient.
+ * Splash brand banner — block-letter SPLASH with aqua gradient and wave framing.
  */
 export function renderBanner(opts?: { subtitle?: string; compact?: boolean }): string {
   const { subtitle = "Autonomous Agent Platform", compact = false } = opts || {};
@@ -113,39 +95,29 @@ export function renderBanner(opts?: { subtitle?: string; compact?: boolean }): s
   if (compact) {
     return [
       "",
-      `  ${style.heading("AlpClaw")} ${style.subtle("·")} ${style.softWhite(subtitle)}`,
+      `  ${style.heading("Splash")} ${style.subtle("·")} ${style.softWhite(subtitle)}`,
       "",
     ].join("\n");
   }
 
-  // Gradient: Deep Fuchsia -> Violet -> Brand Blue -> Sky Blue
+  // Gradient stops: deep teal → aqua → sky foam
   const gradient = (line: string): string => {
     const len = line.length;
     let out = "";
     for (let i = 0; i < len; i++) {
       const char = line[i]!;
       const t = i / Math.max(len - 1, 1);
-
-      // Color stops for a gorgeous Cyberpunk sunset glow
       let r, g, b;
-      if (t < 0.33) {
-        // Fuchsia (217, 70, 239) to Violet (139, 92, 246)
-        const t2 = t / 0.33;
-        r = Math.round(217 + (139 - 217) * t2);
-        g = Math.round(70 + (92 - 70) * t2);
-        b = Math.round(239 + (246 - 239) * t2);
-      } else if (t < 0.66) {
-        // Violet (139, 92, 246) to Brand Blue (37, 99, 235)
-        const t2 = (t - 0.33) / 0.33;
-        r = Math.round(139 + (37 - 139) * t2);
-        g = Math.round(92 + (99 - 92) * t2);
-        b = Math.round(246 + (235 - 246) * t2);
+      if (t < 0.5) {
+        const t2 = t / 0.5;
+        r = Math.round(14 + (34 - 14) * t2);
+        g = Math.round(116 + (211 - 116) * t2);
+        b = Math.round(144 + (238 - 144) * t2);
       } else {
-        // Brand Blue (37, 99, 235) to Sky Blue (56, 189, 248)
-        const t2 = (t - 0.66) / 0.34;
-        r = Math.round(37 + (56 - 37) * t2);
-        g = Math.round(99 + (189 - 99) * t2);
-        b = Math.round(235 + (248 - 235) * t2);
+        const t2 = (t - 0.5) / 0.5;
+        r = Math.round(34 + (165 - 34) * t2);
+        g = Math.round(211 + (243 - 211) * t2);
+        b = Math.round(238 + (252 - 238) * t2);
       }
       out += `\x1b[38;2;${r};${g};${b}m${char}`;
     }
@@ -153,34 +125,35 @@ export function renderBanner(opts?: { subtitle?: string; compact?: boolean }): s
   };
 
   const logo = [
-    "      ▄▄▄       ██▓     ██▓███   ▄████▄   ██▓    ▄▄▄       █     █░",
-    "     ▒████▄    ▓██▒    ▓██░  ██▒▒██▀ ▀█  ▓██▒   ▒████▄    ▓█░ █ ░█░",
-    "     ▒██  ▀█▄  ▒██░    ▓██░ ██▓▒▒▓█    ▄ ▒██░   ▒██  ▀█▄  ▒█░ █ ░█ ",
-    "     ░██▄▄▄▄██ ▒██░    ▒██▄█▓▒ ▒▒▓▓▄ ▄██▒▒██░   ░██▄▄▄▄██ ░█░ █ ░█ ",
-    "      ▓█   ▓██▒░██████▒▒██▒ ░  ░▒ ▓███▀ ░░██████▒▓█   ▓██▒░░██▒██▓ ",
-    "      ▒▒   ▓▒█░░ ▒░▓  ░▒▓▒░ ░  ░░ ░▒ ▒  ░░ ▒░▓  ░▒▒   ▓▒█░░ ▓░▒ ▒  ",
-    "       ▒   ▒▒ ░░ ░ ▒  ░░▒ ░       ░  ▒   ░ ░ ▒  ░ ▒   ▒▒ ░  ▒ ░ ░  ",
-    "       ░   ▒     ░ ░   ░░       ░          ░ ░    ░   ▒     ░   ░  ",
-    "           ░  ░    ░  ░         ░ ░          ░  ░     ░  ░    ░    ",
-    "                                ░                                  ",
+    "   ███████╗██████╗ ██╗      █████╗ ███████╗██╗  ██╗",
+    "   ██╔════╝██╔══██╗██║     ██╔══██╗██╔════╝██║  ██║",
+    "   ███████╗██████╔╝██║     ███████║███████╗███████║",
+    "   ╚════██║██╔═══╝ ██║     ██╔══██║╚════██║██╔══██║",
+    "   ███████║██║     ███████╗██║  ██║███████║██║  ██║",
+    "   ╚══════╝╚═╝     ╚══════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝",
   ];
 
+  const wave =
+    "≈≈≈   ~  ∿   ≈    ∿  ~   ≈≈  ∿  ~  ≈  ∿   ~ ≈≈≈";
+
   const terminalWidth = process.stdout.columns || 80;
-  
-  // Calculate padding to exactly center the 67-character wide logo block
-  const logoWidth = 67;
+  const logoWidth = 53;
   const leftPadCount = Math.max(0, Math.floor((terminalWidth - logoWidth) / 2));
   const pad = " ".repeat(leftPadCount);
 
-  // Center the subtitle as well
-  const titleStrip = `${style.sky("⎯".repeat(15))}  ${style.bold(style.white(subtitle))}  ${style.sky("⎯".repeat(15))}`;
-  const rawTitleStripLen = 30 + 4 + subtitle.length; // 15 dashes * 2 + 4 spaces + text
-  const titlePadCount = Math.max(0, Math.floor((terminalWidth - rawTitleStripLen) / 2));
+  const titleStrip = `${style.sky("≈".repeat(10))}  💧 ${style.bold(style.white(subtitle))} 💧  ${style.sky("≈".repeat(10))}`;
+  const rawTitleLen = 20 + 6 + subtitle.length + 6;
+  const titlePadCount = Math.max(0, Math.floor((terminalWidth - rawTitleLen) / 2));
   const titlePad = " ".repeat(titlePadCount);
+
+  const wavePad = " ".repeat(Math.max(0, Math.floor((terminalWidth - wave.length) / 2)));
 
   const lines = [
     "",
+    wavePad + style.skyLight(wave),
     ...logo.map((l) => pad + gradient(l)),
+    wavePad + style.sky(wave),
+    "",
     titlePad + titleStrip,
     "",
   ];
@@ -188,52 +161,53 @@ export function renderBanner(opts?: { subtitle?: string; compact?: boolean }): s
   return lines.join("\n");
 }
 
-// ─── Section helpers ─────────────────────────────────────────────────────────
+// ─── Section helpers ────────────────────────────────────────────────────────
 
-/** Print a section header with a blue rule. */
 export function section(title: string): string {
   return `\n${style.heading(`${I.diamond} ${title}`)}\n${style.sky("─".repeat(Math.min(title.length + 4, 60)))}`;
 }
 
-/** Print a key-value line in blue/white. */
 export function kv(key: string, value: string, indent: number = 2): string {
   const pad = " ".repeat(indent);
   return `${pad}${style.sky(key.padEnd(12))} ${style.softWhite(value)}`;
 }
 
-/** Print a bullet item. */
 export function bullet(text: string, indent: number = 2): string {
   const pad = " ".repeat(indent);
   return `${pad}${style.sky(I.bullet)} ${style.softWhite(text)}`;
 }
 
-/** Print a success line. */
 export function ok(text: string, indent: number = 2): string {
   const pad = " ".repeat(indent);
   return `${pad}${style.success(I.check)} ${style.softWhite(text)}`;
 }
 
-/** Print a warn line. */
 export function warn(text: string, indent: number = 2): string {
   const pad = " ".repeat(indent);
   return `${pad}${style.warning(I.warn)} ${style.softWhite(text)}`;
 }
 
-/** Print an error line. */
 export function bad(text: string, indent: number = 2): string {
   const pad = " ".repeat(indent);
   return `${pad}${style.error(I.cross)} ${style.softWhite(text)}`;
 }
 
-// ─── Animated banner ────────────────────────────────────────────────────────
+// ─── Animation ──────────────────────────────────────────────────────────────
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
+function skipAnim(): boolean {
+  return (
+    !process.stdout.isTTY ||
+    process.env.CI === "true" ||
+    !!process.env.NO_COLOR ||
+    process.env.SPLASH_NO_ANIM === "1" ||
+    process.env.ALPCLAW_NO_ANIM === "1"
+  );
+}
+
 /**
- * Typewriter-reveal the AlpClaw banner one line at a time.
- *
- * Respects CI / NO_COLOR / non-TTY environments — falls back to a single
- * synchronous print so pipes and logs stay clean.
+ * Typewriter-reveal the Splash banner one line at a time.
  */
 export async function animateBanner(opts?: {
   subtitle?: string;
@@ -242,13 +216,7 @@ export async function animateBanner(opts?: {
   const { subtitle, lineDelayMs = 45 } = opts || {};
   const banner = renderBanner({ subtitle });
 
-  const skipAnim =
-    !process.stdout.isTTY ||
-    process.env.CI === "true" ||
-    process.env.NO_COLOR ||
-    process.env.ALPCLAW_NO_ANIM === "1";
-
-  if (skipAnim) {
+  if (skipAnim()) {
     process.stdout.write(banner + "\n");
     return;
   }
@@ -261,10 +229,10 @@ export async function animateBanner(opts?: {
 }
 
 /**
- * Short spinning pulse of the word "AlpClaw" — good for post-banner flair.
+ * Pulsing Splash wordmark — good for post-banner flair.
  */
-export async function pulseWordmark(word: string = "AlpClaw", cycles: number = 2): Promise<void> {
-  if (!process.stdout.isTTY || process.env.ALPCLAW_NO_ANIM === "1") return;
+export async function pulseWordmark(word: string = "Splash", cycles: number = 2): Promise<void> {
+  if (skipAnim()) return;
   const palette = [C.sky, C.skyLight, C.white, C.skyLight, C.sky, C.blue];
   for (let c = 0; c < cycles; c++) {
     for (const color of palette) {
@@ -273,4 +241,90 @@ export async function pulseWordmark(word: string = "AlpClaw", cycles: number = 2
     }
   }
   process.stdout.write(`\r  ${style.heading(word)}\n`);
+}
+
+// ─── Loading animations ─────────────────────────────────────────────────────
+
+/** Braille spinner frames — smooth circular motion. */
+export const SPINNER_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+
+/** Droplet loader frames — playful water-themed. */
+export const DROP_FRAMES = ["💧 ", " 💧", "  💧", "   💧", "💦", "💧💧", "💧"];
+
+/** Wave loader frames. */
+export const WAVE_FRAMES = [
+  "[≈     ]",
+  "[ ≈≈    ]",
+  "[  ≈≈≈  ]",
+  "[   ≈≈≈≈]",
+  "[    ≈≈≈]",
+  "[     ≈≈]",
+  "[      ≈]",
+  "[       ]",
+];
+
+export interface LoaderHandle {
+  stop(finalText?: string): void;
+  update(text: string): void;
+}
+
+/**
+ * Start a frame-animated loader on stdout. Non-TTY → prints once and no-op.
+ */
+export function startLoader(
+  text: string,
+  opts?: { frames?: string[]; intervalMs?: number; color?: (s: string) => string },
+): LoaderHandle {
+  const frames = opts?.frames || SPINNER_FRAMES;
+  const interval = opts?.intervalMs || 80;
+  const color = opts?.color || style.sky;
+  let msg = text;
+
+  if (skipAnim()) {
+    process.stdout.write(`${color("…")} ${msg}\n`);
+    return {
+      stop: (final?: string) => {
+        if (final) process.stdout.write(`${final}\n`);
+      },
+      update: (t: string) => { msg = t; },
+    };
+  }
+
+  let frame = 0;
+  let stopped = false;
+  const render = () => {
+    if (stopped) return;
+    const f = frames[frame % frames.length]!;
+    process.stdout.write(`\r${color(f)} ${msg}   \x1b[K`);
+    frame++;
+  };
+  render();
+  const timer = setInterval(render, interval);
+
+  return {
+    stop(final?: string) {
+      stopped = true;
+      clearInterval(timer);
+      process.stdout.write(`\r\x1b[K`);
+      if (final) process.stdout.write(`${final}\n`);
+    },
+    update(t: string) {
+      msg = t;
+    },
+  };
+}
+
+/** Quick helper to print a droplet splash "ripple" effect as a heading. */
+export async function ripple(text: string): Promise<void> {
+  if (skipAnim()) {
+    console.log(style.heading(`💧 ${text}`));
+    return;
+  }
+  const widths = [1, 3, 5, 7, 5, 3, 1];
+  for (const w of widths) {
+    const dots = style.skyLight("(" + "≈".repeat(w) + ")");
+    process.stdout.write(`\r  ${dots} ${style.heading(text)}   \x1b[K`);
+    await sleep(60);
+  }
+  process.stdout.write("\n");
 }
